@@ -4,6 +4,10 @@
 #include <time.h>
 #include <omp.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define LOG(fmt, ...) fprintf(stdout, fmt "\n", ##__VA_ARGS__); fflush(stdout);
 
 //#define CC_DISABLE_UV
