@@ -2,7 +2,7 @@
 This repository provides source code to reproduce some of the results of my paper ["A Halfedge Refinement Rule for Parallel Catmull-Clark Subdivision"](https://onrendering.com/).
 The key contribution of this paper is to provide super simple algorithms to compute 
 Catmull-Clark subdivision in parallel. The algorithms are compiled in the C header-only library `CatmullClark.h`. In addition you will find a direct GLSL port of these algorithms in the 
-`glsl` folder. I provide various usage examples in the `examples` folder.
+`glsl` folder. For various usage examples, see the `examples` folder.
 
 ### License
 
