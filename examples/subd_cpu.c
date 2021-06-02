@@ -132,7 +132,11 @@ BenchStats Bench(void (*SubdCallback)(cc_Subd *subd), cc_Subd *subd)
 #else
     const int32_t runCount = 1;
 #endif
+#ifdef _WIN32
+    DWORD startTime, stopTime;
+#else
     struct timespec startTime, stopTime;
+#endif
     double *times = (double *)malloc(sizeof(*times) * runCount);
     double timesTotal = 0.0;
     BenchStats stats = {0.0, 0.0, 0.0, 0.0};
@@ -140,12 +144,21 @@ BenchStats Bench(void (*SubdCallback)(cc_Subd *subd), cc_Subd *subd)
     for (int32_t runID = 0; runID < runCount; ++runID) {
         double time = 0.0;
 
+#ifdef _WIN32
+        startTime = GetTickCount();
+#else
         clock_gettime(CLOCK_MONOTONIC, &startTime);
+#endif
         (*SubdCallback)(subd);
+#ifdef _WIN32
+        stopTime = GetTickCount();
+        time = (stopTime - startTime) / 1e3;
+#else
         clock_gettime(CLOCK_MONOTONIC, &stopTime);
 
         time = (stopTime.tv_sec - startTime.tv_sec);
         time+= (stopTime.tv_nsec - startTime.tv_nsec) / 1000000000.0;
+#endif
         times[runID] = time;
         timesTotal+= time;
     }
