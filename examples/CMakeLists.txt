@@ -21,6 +21,7 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(submodules/glfw)
 include_directories(submodules/glfw/include)
 include_directories(submodules/dj_opengl)
+include_directories(..)
 
 add_executable(obj_to_ccm obj_to_ccm.c)
 add_executable(mesh_info mesh_info.c)
