@@ -4,8 +4,8 @@ project(CatmullClark)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_FLAGS "-Os -march=native")
-#set (CMAKE_C_FLAGS "-g")
+#set(CMAKE_C_FLAGS "-Os -march=native")
+#set(CMAKE_C_FLAGS "-g")
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
