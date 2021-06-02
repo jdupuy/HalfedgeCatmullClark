@@ -1,7 +1,7 @@
 This folder contains the following programs:
 
 ### obj_to_ccm
-This program creates a serial mesh file format (labelled .ccm) from an input OBJ file. In turn, these .ccm files can be used as input for the subsequent programs. A list of .ccm meshes is provided in the `meshes/` folder.
+This program creates a serial mesh file format (labelled .ccm) from an input OBJ file. In turn, these .ccm files can be used as input for the subsequent programs. A list of .ccm meshes is provided in the `meshes/` folder. Note that the included OBJ parser supports the OBJ files provided in the OpenSubdiv repo, which sometimes includes (non-standard) semi-sharp crease tags.
 
 ### mesh_info
 This program is useful to display properties of a .ccm mesh file.
