@@ -31,14 +31,20 @@ add_executable(bench_cpu subd_cpu.c)
 target_compile_definitions(bench_cpu PUBLIC -DFLAG_BENCH)
 
 add_executable(subd_gpu subd_gpu.c glad/glad.c)
-target_link_libraries(subd_gpu glfw pthread)
+target_link_libraries(subd_gpu glfw)
 target_compile_definitions(
     subd_gpu PUBLIC -DPATH_TO_SRC_DIRECTORY="${CMAKE_SOURCE_DIR}/"
 )
+IF (NOT WIN32)
+    target_link_libraries(subd_gpu pthread)
+ENDIF()
+
 
 add_executable(bench_gpu subd_gpu.c glad/glad.c)
 target_link_libraries(bench_gpu glfw pthread)
 target_compile_definitions(
     bench_gpu PUBLIC -DPATH_TO_SRC_DIRECTORY="${CMAKE_SOURCE_DIR}/" -DFLAG_BENCH
 )
-
+IF (NOT WIN32)
+    target_link_libraries(bench_gpu pthread)
+ENDIF()
