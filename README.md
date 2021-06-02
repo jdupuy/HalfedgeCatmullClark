@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/jdupuy/HalfedgeCatmullClark.svg?branch=master)](https://travis-ci.com/jdupuy/HalfedgeCatmullClark)
 
 This repository provides source code to reproduce some of the results of my paper ["A Halfedge Refinement Rule for Parallel Catmull-Clark Subdivision"](https://onrendering.com/).
 The key contribution of this paper is to provide super simple algorithms to compute 
