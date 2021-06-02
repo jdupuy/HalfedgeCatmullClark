@@ -16,5 +16,5 @@ build_script:
   - cmake -G "Visual Studio 15 2017 Win64" ..
   - set MSBuildLogger="C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - set MSBuildOptions=/v:m /p:Configuration=Release /logger:%MSBuildLogger%
-  - msbuild %MSBuildOptions% LongestEdgeBisection2D.sln
+  - msbuild %MSBuildOptions% CatmullClark.sln
 
