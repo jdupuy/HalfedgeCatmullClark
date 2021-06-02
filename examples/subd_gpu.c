@@ -81,7 +81,7 @@ struct SubdManager {
     6
 };
 
-#define PATH_TO_SHADER_DIRECTORY PATH_TO_SRC_DIRECTORY "./glsl/"
+#define PATH_TO_SHADER_DIRECTORY PATH_TO_SRC_DIRECTORY "../glsl/"
 
 static void
 LoadCatmullClarkLibrary(
