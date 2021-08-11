@@ -2957,8 +2957,8 @@ CC_PARALLEL_FOR
     for (int32_t edgeID = 0; edgeID < edgeCount; ++edgeID) {
         const int32_t nextID = ccm_CreaseNextID(cage, edgeID);
         const int32_t prevID = ccm_CreasePrevID(cage, edgeID);
-        const bool t1 = ccm_CreasePrevID(cage, nextID) == edgeID;
-        const bool t2 = ccm_CreaseNextID(cage, prevID) == edgeID;
+        const bool t1 = ccm_CreasePrevID(cage, nextID) == edgeID && nextID != edgeID;
+        const bool t2 = ccm_CreaseNextID(cage, prevID) == edgeID && prevID != edgeID;
         const float thisS = 3.0f * ccm_CreaseSharpness(cage, edgeID);
         const float nextS = ccm_CreaseSharpness(cage, nextID);
         const float prevS = ccm_CreaseSharpness(cage, prevID);
@@ -3000,8 +3000,8 @@ CC_PARALLEL_FOR
     for (int32_t edgeID = 0; edgeID < creaseCount; ++edgeID) {
         const int32_t nextID = ccs_CreaseNextID_Fast(subd, edgeID, depth);
         const int32_t prevID = ccs_CreasePrevID_Fast(subd, edgeID, depth);
-        const bool t1 = ccs_CreasePrevID_Fast(subd, nextID, depth) == edgeID;
-        const bool t2 = ccs_CreaseNextID_Fast(subd, prevID, depth) == edgeID;
+        const bool t1 = ccs_CreasePrevID_Fast(subd, nextID, depth) == edgeID && nextID != edgeID;
+        const bool t2 = ccs_CreaseNextID_Fast(subd, prevID, depth) == edgeID && prevID != edgeID;
         const float thisS = 3.0f * ccs_CreaseSharpness_Fast(subd, edgeID, depth);
         const float nextS = ccs_CreaseSharpness_Fast(subd, nextID, depth);
         const float prevS = ccs_CreaseSharpness_Fast(subd, prevID, depth);

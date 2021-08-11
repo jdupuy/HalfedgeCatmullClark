@@ -20,8 +20,8 @@ void main()
     if (edgeID < edgeCount) {
         const int nextID = ccm_CreaseNextID(edgeID);
         const int prevID = ccm_CreasePrevID(edgeID);
-        const bool t1 = ccm_CreasePrevID(nextID) == edgeID;
-        const bool t2 = ccm_CreaseNextID(prevID) == edgeID;
+        const bool t1 = ccm_CreasePrevID(nextID) == edgeID && nextID != edgeID;
+        const bool t2 = ccm_CreaseNextID(prevID) == edgeID && prevID != edgeID;
         const float thisS = 3.0f * ccm_CreaseSharpness(edgeID);
         const float nextS = ccm_CreaseSharpness(nextID);
         const float prevS = ccm_CreaseSharpness(prevID);

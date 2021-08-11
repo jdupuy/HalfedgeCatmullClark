@@ -25,8 +25,8 @@ void main()
     if (edgeID < creaseCount) {
         const int nextID = ccs_CreaseNextID_Fast(edgeID, depth);
         const int prevID = ccs_CreasePrevID_Fast(edgeID, depth);
-        const bool t1 = ccs_CreasePrevID_Fast(nextID, depth) == edgeID;
-        const bool t2 = ccs_CreaseNextID_Fast(prevID, depth) == edgeID;
+        const bool t1 = ccs_CreasePrevID_Fast(nextID, depth) == edgeID && nextID != edgeID;
+        const bool t2 = ccs_CreaseNextID_Fast(prevID, depth) == edgeID && prevID != edgeID;
         const float thisS = 3.0f * ccs_CreaseSharpness_Fast(edgeID, depth);
         const float nextS = ccs_CreaseSharpness_Fast(nextID, depth);
         const float prevS = ccs_CreaseSharpness_Fast(prevID, depth);
