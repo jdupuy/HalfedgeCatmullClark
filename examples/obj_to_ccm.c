@@ -278,10 +278,10 @@ ScrollFaceHalfedgeID(
 static void LoadFaceMappings(cc_Mesh *mesh, const cbf_BitField *faceIterator)
 {
     const int32_t halfedgeCount = ccm_HalfedgeCount(mesh);
-    const int32_t faceCount = cbf_BitCount(faceIterator);
+    const int32_t faceCount = cbf_BitCount(faceIterator) - 1;
 
     mesh->faceToHalfedgeIDs = (int32_t *)CC_MALLOC(sizeof(int32_t) * faceCount);
-    mesh->faceCount = faceCount - 1;
+    mesh->faceCount = faceCount;
 
 CC_PARALLEL_FOR
     for (int32_t halfedgeID = 0; halfedgeID  < halfedgeCount; ++halfedgeID) {
@@ -364,7 +364,7 @@ CC_PARALLEL_FOR
     }
 CC_BARRIER
 
-    cbf_Clear(edgeIterator);
+    cbf_Release(edgeIterator);
 }
 
 
@@ -702,7 +702,7 @@ CC_BARRIER
     }
 
     fclose(stream);
-    cbf_Clear(faceIterator);
+    cbf_Release(faceIterator);
 
     ComputeCreaseNeighbors(mesh);
 
