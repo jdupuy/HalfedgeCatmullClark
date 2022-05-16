@@ -8,7 +8,7 @@ struct cc_Halfedge {
     int uvID;
 };
 
-struct cc_Halfedge_Quad {
+struct cc_Halfedge_SemiRegular {
     int twinID;
     int edgeID;
     int vertexID;
@@ -125,7 +125,7 @@ layout(std430, binding = CC_BUFFER_BINDING_SUBD_HALFEDGE)
 readonly
 #endif
 buffer ccs_HalfedgeBuffer {
-    cc_Halfedge_Quad ccsu_Halfedges[];
+    cc_Halfedge_SemiRegular ccsu_Halfedges[];
 };
 
 layout(std430, binding = CC_BUFFER_BINDING_SUBD_CREASE)
@@ -841,7 +841,7 @@ float ccs_CreaseSharpness(int edgeID, int depth)
  * Halfedge queries
  *
  */
-cc_Halfedge_Quad ccs__Halfedge(int halfedgeID, int depth)
+cc_Halfedge_SemiRegular ccs__Halfedge(int halfedgeID, int depth)
 {
     const int stride = ccs_CumulativeHalfedgeCountAtDepth(depth - 1);
 

@@ -9,7 +9,7 @@ layout (local_size_x = CC_LOCAL_SIZE_X,
         local_size_z = 1) in;
 
 void
-WriteHalfedge(int halfedgeID, in const cc_Halfedge_Quad halfedge, int depth)
+WriteHalfedge(int halfedgeID, in const cc_Halfedge_SemiRegular halfedge, int depth)
 {
     const int stride = ccs_CumulativeHalfedgeCountAtDepth(depth);
 
@@ -37,7 +37,7 @@ void main()
         const int prevEdgeID = ccs_HalfedgeEdgeID(prevID, depth);
         const int prevTwinID = ccs_HalfedgeTwinID(prevID, depth);
         const int twinNextID = ccs_HalfedgeNextID(twinID, depth);
-        cc_Halfedge_Quad halfedges[4];
+        cc_Halfedge_SemiRegular halfedges[4];
 
         // twinIDs
         halfedges[0].twinID = 4 * twinNextID + 3;

@@ -8,7 +8,7 @@
 
 #define LOG(fmt, ...) fprintf(stdout, fmt "\n", ##__VA_ARGS__); fflush(stdout);
 
-//#define CC_DISABLE_UV
+#define CC_DISABLE_UV
 #define CC_IMPLEMENTATION
 #include "CatmullClark.h"
 
@@ -78,7 +78,7 @@ struct OpenGL {
 struct SubdManager {
     int32_t computeShaderLocalSize;
 } g_subd = {
-    6
+    5
 };
 
 #define PATH_TO_SHADER_DIRECTORY PATH_TO_SRC_DIRECTORY "../glsl/"
@@ -91,6 +91,7 @@ LoadCatmullClarkLibrary(
     bool vertexWrite
 ) {
     djgp_push_string(djgp, "#extension GL_NV_shader_atomic_float: require\n");
+    djgp_push_string(djgp, "#extension GL_NV_shader_thread_shuffle: require\n");
 #ifdef CC_DISABLE_UV
     djgp_push_string(djgp, "#define CC_DISABLE_UV\n");
 #endif
@@ -386,7 +387,7 @@ bool LoadSubdVertexPointBuffer(const cc_Subd *subd)
 bool LoadSubdHalfedgeBuffer(const cc_Subd *subd)
 {
     return LoadCatmullClarkBuffer(BUFFER_SUBD_HALFEDGES,
-                                  sizeof(cc_Halfedge_Quad) * ccs_CumulativeHalfedgeCount(subd),
+                                  sizeof(cc_Halfedge_SemiRegular) * ccs_CumulativeHalfedgeCount(subd),
                                   NULL,
                                   GL_MAP_READ_BIT);
 }
@@ -680,12 +681,12 @@ BenchStats Bench(void (*SubdCallback)(const cc_Subd *subd), const cc_Subd *subd)
 void GetHalfedges(cc_Subd *subd)
 {
     const GLuint *buffer = &g_gl.buffers[BUFFER_SUBD_HALFEDGES];
-    const cc_Halfedge_Quad *halfedges =
-            (cc_Halfedge_Quad *)glMapNamedBuffer(*buffer, GL_READ_ONLY);
+    const cc_Halfedge_SemiRegular *halfedges =
+            (cc_Halfedge_SemiRegular *)glMapNamedBuffer(*buffer, GL_READ_ONLY);
 
     memcpy(subd->halfedges,
            halfedges,
-           ccs_CumulativeHalfedgeCount(subd) * sizeof(cc_Halfedge_Quad));
+           ccs_CumulativeHalfedgeCount(subd) * sizeof(cc_Halfedge_SemiRegular));
 
     glUnmapNamedBuffer(*buffer);
 }

@@ -7,7 +7,7 @@ layout (local_size_x = CC_LOCAL_SIZE_X,
         local_size_z = 1) in;
 
 void
-WriteHalfedge(int halfedgeID, in const cc_Halfedge_Quad halfedge)
+WriteHalfedge(int halfedgeID, in const cc_Halfedge_SemiRegular halfedge)
 {
     ccsu_Halfedges[halfedgeID] = halfedge;
 }
@@ -32,7 +32,7 @@ void main()
         const int prevTwinID = ccm_HalfedgeTwinID(prevID);
         const int twinNextID =
             twinID >= 0 ? ccm_HalfedgeNextID(twinID) : -1;
-        cc_Halfedge_Quad newHalfedges[4];
+        cc_Halfedge_SemiRegular newHalfedges[4];
 
         // twinIDs
         newHalfedges[0].twinID = 4 * twinNextID + 3;
