@@ -318,10 +318,10 @@ CC_BARRIER
  * LoadEdgeMappings -- Computes the mappings for the edges of the mesh
  *
  * Catmull-Clark subdivision requires access to the edges of an input mesh.
- * Since we are dealing with a half-edge representation, we virtually
- * have to iterate the half-edges in a sparse way (an edge is a pair of
- * neighboring half-edges in the general case, except for boundary edges
- * where it only consists of a single half-edge).
+ * Since we are dealing with a halfedge representation, we virtually
+ * have to iterate the halfedges in a sparse way (an edge is a pair of
+ * neighboring halfedges in the general case, except for boundary edges
+ * where it only consists of a single halfedge).
  * This function builds a data-structure that allows to do just that:
  * for each halfedge pair, we only consider the one that has the largest
  * halfedgeID. This allows to treat boundary and regular edges seamlessly.
@@ -369,15 +369,15 @@ CC_BARRIER
 
 
 /*******************************************************************************
- * LoadVertexHalfedges -- Computes an iterator over one half-edge per vertex
+ * LoadVertexHalfedges -- Computes an iterator over one halfedge per vertex
  *
- * Catmull-Clark subdivision requires access to the half-edges that surround
+ * Catmull-Clark subdivision requires access to the halfedges that surround
  * the vertices of an input mesh.
- * This function determines a half-edge ID that starts from a
+ * This function determines a halfedge ID that starts from a
  * given vertex within that vertex. We distinguish two cases:
  * 1- If the vertex is a lying on a boundary, we stored the halfedge that
  * allows for iteration in the forward sense.
- * 2- Otherwise we store the largest half-edge ID.
+ * 2- Otherwise we store the largest halfedge ID.
  *
  */
 static void LoadVertexHalfedges(cc_Mesh *mesh)
@@ -401,7 +401,7 @@ CC_PARALLEL_FOR
             boundaryHalfedgeID = iterator;
         }
 
-        // affect max half-edge ID to vertex
+        // affect max halfedge ID to vertex
         if /*boundary involved*/ (iterator < 0) {
             if (halfedgeID == boundaryHalfedgeID) {
                 mesh->vertexToHalfedgeIDs[vertexID] = boundaryHalfedgeID;
@@ -528,7 +528,7 @@ ObjReadCrease(
 
 
 /*******************************************************************************
- * ObjLoadMeshData -- Loads an OBJ mesh into a half-edge mesh
+ * ObjLoadMeshData -- Loads an OBJ mesh into a halfedge mesh
  *
  */
 static bool
@@ -571,7 +571,7 @@ ObjLoadMeshData(FILE *stream, cc_Mesh *mesh, cbf_BitField *faceIterator)
 
 
 /*******************************************************************************
- * ObjLoadCreaseData -- Loads an OBJ crease mesh data into a half-edge mesh
+ * ObjLoadCreaseData -- Loads an OBJ crease mesh data into a halfedge mesh
  *
  */
 static bool
