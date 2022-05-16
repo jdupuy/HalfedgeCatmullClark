@@ -81,10 +81,10 @@
  *
  */
 typedef struct {
-    int halfedgeID, hashID;
+    int32_t halfedgeID, hashID;
 } TwinComputationData;
 
-static int TwinComputationCompareCallback(const void *a, const void *b)
+static int32_t TwinComputationCompareCallback(const void *a, const void *b)
 {
     const TwinComputationData *d1 = (const TwinComputationData *)a;
     const TwinComputationData *d2 = (const TwinComputationData *)b;
@@ -98,7 +98,7 @@ static int TwinComputationCompareCallback(const void *a, const void *b)
     }
 }
 
-static int
+static int32_t
 BinarySearch(
     const TwinComputationData *data,
     int32_t hashID,
