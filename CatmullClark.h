@@ -3094,7 +3094,7 @@ static int64_t ccm__Magic()
     const union {
         char    string[8];
         int64_t numeric;
-    } magic = {.string = {'c', 'c', '_', 'M', 'e', 's', 'h', '1'}};
+    } magic = {{'c', 'c', '_', 'M', 'e', 's', 'h', '1'}};
 
     return magic.numeric;
 }
