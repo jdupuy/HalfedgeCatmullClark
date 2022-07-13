@@ -82,22 +82,8 @@
  */
 typedef struct {
     int32_t halfedgeID;
-    int64_t hashID;
+    uint64_t hashID;
 } TwinComputationData;
-
-static int32_t TwinComputationCompareCallback(const void *a, const void *b)
-{
-    const TwinComputationData *d1 = (const TwinComputationData *)a;
-    const TwinComputationData *d2 = (const TwinComputationData *)b;
-
-    if (d1->hashID > d2->hashID) {
-        return 1;
-    } else if (d1->hashID < d2->hashID) {
-        return -1;
-    } else {
-        return 0;
-    }
-}
 
 static int32_t
 BinarySearch(
@@ -122,11 +108,54 @@ BinarySearch(
     }
 }
 
+static void
+SortTwinComputationData(TwinComputationData *array, uint32_t arraySize)
+{
+    for (uint32_t d2 = 1u; d2 < arraySize; d2*= 2u) {
+        for (uint32_t d1 = d2; d1 >= 1u; d1/= 2u) {
+            const uint32_t mask = (0xFFFFFFFEu * d1);
+
+CC_PARALLEL_FOR
+            for (uint32_t i = 0; i < (arraySize / 2); ++i) {
+                const uint32_t i1 = ((i << 1) & mask) | (i & ~(mask >> 1));
+                const uint32_t i2 = i1 | d1;
+                const TwinComputationData t1 = array[i1];
+                const TwinComputationData t2 = array[i2];
+                const TwinComputationData min = t1.hashID < t2.hashID ? t1 : t2;
+                const TwinComputationData max = t1.hashID < t2.hashID ? t2 : t1;
+
+                if ((i & d2) == 0) {
+                    array[i1] = min;
+                    array[i2] = max;
+                } else {
+                    array[i1] = max;
+                    array[i2] = min;
+                }
+            }
+CC_BARRIER
+        }
+    }
+}
+
+static int32_t RoundUpToPowerOfTwo(int32_t x)
+{
+    x--;
+    x|= x >>  1;
+    x|= x >>  2;
+    x|= x >>  4;
+    x|= x >>  8;
+    x|= x >> 16;
+    x++;
+
+    return x;
+}
+
 static void ComputeTwins(cc_Mesh *mesh)
 {
     const int32_t halfedgeCount = ccm_HalfedgeCount(mesh);
     const int32_t vertexCount = ccm_VertexCount(mesh);
-    TwinComputationData *table = (TwinComputationData *)CC_MALLOC(halfedgeCount * sizeof(*table));
+    const int32_t tableSize = RoundUpToPowerOfTwo(halfedgeCount);
+    TwinComputationData *table = (TwinComputationData *)CC_MALLOC(tableSize * sizeof(*table));
 
     CC_PARALLEL_FOR
     for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
@@ -135,18 +164,24 @@ static void ComputeTwins(cc_Mesh *mesh)
         const int32_t v1 = ccm_HalfedgeVertexID(mesh, nextID);
 
         table[halfedgeID].halfedgeID = halfedgeID;
-        table[halfedgeID].hashID = (int64_t)v0 + (int64_t)vertexCount * v1;
+        table[halfedgeID].hashID = (uint64_t)v0 + (uint64_t)vertexCount * v1;
     }
     CC_BARRIER
 
-    qsort(table, halfedgeCount, sizeof(table[0]), &TwinComputationCompareCallback);
+    CC_PARALLEL_FOR
+    for (int32_t halfedgeID = halfedgeCount; halfedgeID < tableSize; ++halfedgeID) {
+        table[halfedgeID].hashID = ~0ULL;
+    }
+    CC_BARRIER
+
+    SortTwinComputationData(table, tableSize);
 
     CC_PARALLEL_FOR
     for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
         const int32_t nextID = ccm_HalfedgeNextID(mesh, halfedgeID);
         const int32_t v0 = ccm_HalfedgeVertexID(mesh, halfedgeID);
         const int32_t v1 = ccm_HalfedgeVertexID(mesh, nextID);
-        const int64_t hashID = (int64_t)v1 + (int64_t)vertexCount * v0;
+        const int64_t hashID = (uint64_t)v1 + (uint64_t)vertexCount * v0;
         const int32_t twinID = BinarySearch(table, hashID, 0, halfedgeCount - 1);
 
         mesh->halfedges[halfedgeID].twinID = twinID;
