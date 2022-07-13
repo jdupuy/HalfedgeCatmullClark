@@ -87,25 +87,23 @@ typedef struct {
 
 static int32_t
 BinarySearch(
-    const TwinComputationData *data,
-    int64_t hashID,
-    int32_t beginID,
-    int32_t endID
+    const TwinComputationData *array,
+    int32_t arraySize,
+    uint64_t hashID
 ) {
-    int32_t midID;
+    int32_t a = 0, b = arraySize - 1;
 
-    if (beginID > endID)
-       return -1; // not found
+    while (a <= b) {
+        const int32_t c = (a + b) / 2;
 
-    midID = (beginID + endID) / 2;
-
-    if (data[midID].hashID == hashID) {
-        return data[midID].halfedgeID;
-    } else if (hashID > data[midID].hashID) {
-        return BinarySearch(data, hashID, midID + 1, endID);
-    } else {
-        return BinarySearch(data, hashID, beginID, midID - 1);
+        if (array[c].hashID < hashID) {
+            a = c + 1;
+        } else {
+            b = c - 1;
+        }
     }
+
+    return (array[a].hashID == hashID) ? array[a].halfedgeID : -1;
 }
 
 static void
@@ -181,8 +179,8 @@ static void ComputeTwins(cc_Mesh *mesh)
         const int32_t nextID = ccm_HalfedgeNextID(mesh, halfedgeID);
         const int32_t v0 = ccm_HalfedgeVertexID(mesh, halfedgeID);
         const int32_t v1 = ccm_HalfedgeVertexID(mesh, nextID);
-        const int64_t hashID = (uint64_t)v1 + (uint64_t)vertexCount * v0;
-        const int32_t twinID = BinarySearch(table, hashID, 0, halfedgeCount - 1);
+        const uint64_t hashID = (uint64_t)v1 + (uint64_t)vertexCount * v0;
+        const int32_t twinID = BinarySearch(table, halfedgeCount - 1, hashID);
 
         mesh->halfedges[halfedgeID].twinID = twinID;
     }
