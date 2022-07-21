@@ -706,7 +706,7 @@ CCDEF cc_VertexUv ccm_Uv(const cc_Mesh *mesh, int32_t uvID)
  * VertexToHalfedgeID -- Returns a halfedge ID that carries a given vertex
  *
  */
-CCDEF int32_t ccm_VertexPointToHalfedgeID(const cc_Mesh *mesh, int32_t vertexID)
+CCDEF int32_t ccm_VertexToHalfedgeID(const cc_Mesh *mesh, int32_t vertexID)
 {
     return mesh->vertexToHalfedgeIDs[vertexID];
 }
@@ -1328,7 +1328,7 @@ ccs__VertexToHalfedgeID_First(const cc_Mesh *cage, int32_t vertexID)
 
     } else /* [0, V) */ {
 
-        return 4 * ccm_VertexPointToHalfedgeID(cage, vertexID) + 0;
+        return 4 * ccm_VertexToHalfedgeID(cage, vertexID) + 0;
     }
 }
 
@@ -1669,7 +1669,7 @@ static void ccs__CageVertexPoints_Gather(cc_Subd *subd)
 
 CC_PARALLEL_FOR
     for (int32_t vertexID = 0; vertexID < vertexCount; ++vertexID) {
-        const int32_t halfedgeID = ccm_VertexPointToHalfedgeID(cage, vertexID);
+        const int32_t halfedgeID = ccm_VertexToHalfedgeID(cage, vertexID);
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
         const cc_VertexPoint newEdgePoint = newEdgePoints[edgeID];
@@ -1777,7 +1777,7 @@ static void ccs__CreasedCageVertexPoints_Gather(cc_Subd *subd)
 
 CC_PARALLEL_FOR
     for (int32_t vertexID = 0; vertexID < vertexCount; ++vertexID) {
-        const int32_t halfedgeID = ccm_VertexPointToHalfedgeID(cage, vertexID);
+        const int32_t halfedgeID = ccm_VertexToHalfedgeID(cage, vertexID);
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t prevID = ccm_HalfedgePrevID(cage, halfedgeID);
         const int32_t prevEdgeID = ccm_HalfedgeEdgeID(cage, prevID);
