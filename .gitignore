@@ -1,0 +1,3 @@
+examples/build/*
+cuda-rewrite/examples/build/*
+settings.json
