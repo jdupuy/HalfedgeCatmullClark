@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <omp.h>
+#include <cuda.h>
 
 #define LOG(fmt, ...) fprintf(stdout, fmt "\n", ##__VA_ARGS__); fflush(stdout);
 

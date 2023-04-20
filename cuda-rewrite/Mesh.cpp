@@ -1,10 +1,11 @@
 #include "Mesh.h"
+#include <cuda.h>
 
 /*******************************************************************************
  * FaceCount -- Returns the number of faces
  *
  */
- int32_t ccm_FaceCount(const cc_Mesh *mesh)
+ __device__ int32_t ccm_FaceCount(const cc_Mesh *mesh)
 {
     return mesh->faceCount;
 }
@@ -14,7 +15,7 @@
  * EdgeCount -- Returns the number of edges
  *
  */
- int32_t ccm_EdgeCount(const cc_Mesh *mesh)
+ __device__ int32_t ccm_EdgeCount(const cc_Mesh *mesh)
 {
     return mesh->edgeCount;
 }
@@ -24,7 +25,7 @@
  * CreaseCount -- Returns the number of creases
  *
  */
- int32_t ccm_CreaseCount(const cc_Mesh *mesh)
+ __device__ int32_t ccm_CreaseCount(const cc_Mesh *mesh)
 {
     return ccm_EdgeCount(mesh);
 }
@@ -34,7 +35,7 @@
  * HalfedgeCount -- Returns the number of halfedges
  *
  */
- int32_t ccm_HalfedgeCount(const cc_Mesh *mesh)
+ __device__ int32_t ccm_HalfedgeCount(const cc_Mesh *mesh)
 {
     return mesh->halfedgeCount;
 }
@@ -44,7 +45,7 @@
  * VertexCount -- Returns the number of vertices
  *
  */
- int32_t ccm_VertexCount(const cc_Mesh *mesh)
+ __device__ int32_t ccm_VertexCount(const cc_Mesh *mesh)
 {
     return mesh->vertexCount;
 }
@@ -54,7 +55,7 @@
  * UvCount -- Returns the number of uvs
  *
  */
- int32_t ccm_UvCount(const cc_Mesh *mesh)
+ __device__ int32_t ccm_UvCount(const cc_Mesh *mesh)
 {
     return mesh->uvCount;
 }
@@ -70,7 +71,7 @@
  * where H0 denotes the number of half-edges of the control cage.
  *
  */
- int32_t ccm_FaceCountAtDepth_Fast(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccm_FaceCountAtDepth_Fast(const cc_Mesh *cage, int32_t depth)
 {
     assert(depth > 0);
     const int32_t H0 = ccm_HalfedgeCount(cage);
@@ -78,7 +79,7 @@
     return (H0 << ((depth - 1) << 1));
 }
 
- int32_t ccm_FaceCountAtDepth(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccm_FaceCountAtDepth(const cc_Mesh *cage, int32_t depth)
 {
     if (depth == 0) {
         return ccm_FaceCount(cage);
@@ -99,7 +100,7 @@
  * of the control cage.
  *
  */
- int32_t ccm_EdgeCountAtDepth_Fast(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccm_EdgeCountAtDepth_Fast(const cc_Mesh *cage, int32_t depth)
 {
     assert(depth > 0);
     const int32_t E0 = ccm_EdgeCount(cage);
@@ -109,7 +110,7 @@
     return ((E0 << 1) + (tmp * H0)) << (depth - 1);
 }
 
- int32_t ccm_EdgeCountAtDepth(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccm_EdgeCountAtDepth(const cc_Mesh *cage, int32_t depth)
 {
     if (depth == 0) {
         return ccm_EdgeCount(cage);
@@ -128,7 +129,7 @@
  * where H0 denotes the number of half-edges of the control cage.
  *
  */
- int32_t ccm_HalfedgeCountAtDepth(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccm_HalfedgeCountAtDepth(const cc_Mesh *cage, int32_t depth)
 {
     const int32_t H0 = ccm_HalfedgeCount(cage);
 
@@ -145,7 +146,7 @@
  * where C0 denotes the number of creases of the control cage.
  *
  */
- int32_t ccm_CreaseCountAtDepth(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccm_CreaseCountAtDepth(const cc_Mesh *cage, int32_t depth)
 {
     const int32_t C0 = ccm_CreaseCount(cage);
 
@@ -168,7 +169,7 @@
  * the first subdivision step by hand and then apply the formula.
  *
  */
- int32_t ccm_VertexCountAtDepth_Fast(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccm_VertexCountAtDepth_Fast(const cc_Mesh *cage, int32_t depth)
 {
     assert(depth > 0);
     const int32_t V0 = ccm_VertexCount(cage);
@@ -183,7 +184,7 @@
     return V1 + tmp * (E1 + tmp * F1);
 }
 
- int32_t ccm_VertexCountAtDepth(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccm_VertexCountAtDepth(const cc_Mesh *cage, int32_t depth)
 {
     if (depth == 0) {
         return ccm_VertexCount(cage);
@@ -198,86 +199,86 @@
  *
  */
 
- int32_t ccm_HalfedgeTwinID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgeTwinID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm__Halfedge(mesh, halfedgeID)->twinID;
 }
 
- int32_t ccm_HalfedgeNextID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgeNextID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm__Halfedge(mesh, halfedgeID)->nextID;
 }
 
- int32_t ccm_HalfedgePrevID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgePrevID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm__Halfedge(mesh, halfedgeID)->prevID;
 }
 
- int32_t ccm_HalfedgeVertexID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgeVertexID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm__Halfedge(mesh, halfedgeID)->vertexID;
 }
 
- int32_t ccm_HalfedgeUvID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgeUvID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm__Halfedge(mesh, halfedgeID)->uvID;
 }
 
- int32_t ccm_HalfedgeEdgeID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgeEdgeID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm__Halfedge(mesh, halfedgeID)->edgeID;
 }
 
- int32_t ccm_HalfedgeFaceID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgeFaceID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm__Halfedge(mesh, halfedgeID)->faceID;
 }
 
- float ccm_HalfedgeSharpness(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ float ccm_HalfedgeSharpness(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm_CreaseSharpness(mesh, ccm_HalfedgeEdgeID(mesh, halfedgeID));
 }
 
- cc_VertexPoint ccm_HalfedgeVertexPoint(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ cc_VertexPoint ccm_HalfedgeVertexPoint(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm_VertexPoint(mesh, ccm_HalfedgeVertexID(mesh, halfedgeID));
 }
 
- cc_VertexUv ccm_HalfedgeVertexUv(const cc_Mesh *mesh, int32_t halfedgeID)
+__device__ cc_VertexUv ccm_HalfedgeVertexUv(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm_Uv(mesh, ccm_HalfedgeUvID(mesh, halfedgeID));
 }
 
 
 
- int32_t ccm_CreaseNextID(const cc_Mesh *mesh, int32_t edgeID)
+ __device__ int32_t ccm_CreaseNextID(const cc_Mesh *mesh, int32_t edgeID)
 {
     return ccm__Crease(mesh, edgeID)->nextID;
 }
 
- int32_t ccm_CreasePrevID(const cc_Mesh *mesh, int32_t edgeID)
+__device__ int32_t ccm_CreasePrevID(const cc_Mesh *mesh, int32_t edgeID)
 {
     return ccm__Crease(mesh, edgeID)->prevID;
 }
 
- float ccm_CreaseSharpness(const cc_Mesh *mesh, int32_t edgeID)
+ __device__ float ccm_CreaseSharpness(const cc_Mesh *mesh, int32_t edgeID)
 {
     return ccm__Crease(mesh, edgeID)->sharpness;
 }
 
- int32_t ccm_HalfedgeFaceID_Quad(int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgeFaceID_Quad(int32_t halfedgeID)
 {
     return halfedgeID >> 2;
 }
 
 
 
- int32_t ccm_HalfedgeNextID_Quad(int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgeNextID_Quad(int32_t halfedgeID)
 {
     return ccm__ScrollFaceHalfedgeID_Quad(halfedgeID, +1);
 }
 
- int32_t ccm_HalfedgePrevID_Quad(int32_t halfedgeID)
+ __device__ int32_t ccm_HalfedgePrevID_Quad(int32_t halfedgeID)
 {
     return ccm__ScrollFaceHalfedgeID_Quad(halfedgeID, -1);
 }
@@ -286,11 +287,11 @@
  * Vertex data accessors
  *
  */
- cc_VertexPoint ccm_VertexPoint(const cc_Mesh *mesh, int32_t vertexID)
+ __device__ cc_VertexPoint ccm_VertexPoint(const cc_Mesh *mesh, int32_t vertexID)
 {
     return mesh->vertexPoints[vertexID];
 }
- cc_VertexUv ccm_Uv(const cc_Mesh *mesh, int32_t uvID)
+ __device__ cc_VertexUv ccm_Uv(const cc_Mesh *mesh, int32_t uvID)
 {
     return mesh->uvs[uvID];
 }
@@ -300,7 +301,7 @@
  * VertexToHalfedgeID -- Returns a halfedge ID that carries a given vertex
  *
  */
- int32_t ccm_VertexToHalfedgeID(const cc_Mesh *mesh, int32_t vertexID)
+ __device__ int32_t ccm_VertexToHalfedgeID(const cc_Mesh *mesh, int32_t vertexID)
 {
     return mesh->vertexToHalfedgeIDs[vertexID];
 }
@@ -310,7 +311,7 @@
  * EdgeToHalfedgeID -- Returns a halfedge associated with a given edge
  *
  */
- int32_t ccm_EdgeToHalfedgeID(const cc_Mesh *mesh, int32_t edgeID)
+ __device__ int32_t ccm_EdgeToHalfedgeID(const cc_Mesh *mesh, int32_t edgeID)
 {
     return mesh->edgeToHalfedgeIDs[edgeID];
 }
@@ -320,12 +321,12 @@
  * FaceToHalfedgeID -- Returns a halfedge associated with a given face
  *
  */
- int32_t ccm_FaceToHalfedgeID(const cc_Mesh *mesh, int32_t faceID)
+ __device__ int32_t ccm_FaceToHalfedgeID(const cc_Mesh *mesh, int32_t faceID)
 {
     return mesh->faceToHalfedgeIDs[faceID];
 }
 
- int32_t ccm_FaceToHalfedgeID_Quad(int32_t faceID)
+ __device__ int32_t ccm_FaceToHalfedgeID_Quad(int32_t faceID)
 {
     return faceID << 2;
 }
@@ -335,14 +336,14 @@
  * Vertex Halfedge Iteration
  *
  */
- int32_t ccm_NextVertexHalfedgeID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_NextVertexHalfedgeID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     const int32_t twinID = ccm_HalfedgeTwinID(mesh, halfedgeID);
 
     return twinID >= 0 ? ccm_HalfedgeNextID(mesh, twinID) : -1;
 }
 
- int32_t ccm_PrevVertexHalfedgeID(const cc_Mesh *mesh, int32_t halfedgeID)
+ __device__ int32_t ccm_PrevVertexHalfedgeID(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     const int32_t prevID = ccm_HalfedgePrevID(mesh, halfedgeID);
 
@@ -406,12 +407,12 @@ ccm_Create(
  * FaceCountAtDepth -- Returns the accumulated number of faces up to a given subdivision depth
  *
  */
- int32_t ccs_CumulativeFaceCountAtDepth(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccs_CumulativeFaceCountAtDepth(const cc_Mesh *cage, int32_t depth)
 {
     return ccs_CumulativeHalfedgeCountAtDepth(cage, depth) >> 2;
 }
 
- int32_t ccs_CumulativeFaceCount(const cc_Subd *subd)
+ __device__ int32_t ccs_CumulativeFaceCount(const cc_Subd *subd)
 {
     return ccs_CumulativeFaceCountAtDepth(subd->cage, ccs_MaxDepth(subd));
 }
@@ -421,7 +422,7 @@ ccm_Create(
  * EdgeCountAtDepth -- Returns the accumulated number of edges up to a given subdivision depth
  *
  */
- int32_t ccs_CumulativeEdgeCountAtDepth(const cc_Mesh *cage, int32_t depth)
+ __device__ int32_t ccs_CumulativeEdgeCountAtDepth(const cc_Mesh *cage, int32_t depth)
 {
     assert(depth >= 0);
     const int32_t H0 = ccm_HalfedgeCount(cage);
@@ -434,7 +435,7 @@ ccm_Create(
     return (A * (6 * E1 + A * H1 - H1)) / 6;
 }
 
- int32_t ccs_CumulativeEdgeCount(const cc_Subd *subd)
+ __device__ int32_t ccs_CumulativeEdgeCount(const cc_Subd *subd)
 {
     return ccs_CumulativeEdgeCountAtDepth(subd->cage, ccs_MaxDepth(subd));
 }
@@ -451,8 +452,7 @@ ccm_Create(
  * halfedges in the control mesh.
  *
  */
- int32_t
-ccs_CumulativeHalfedgeCountAtDepth(const cc_Mesh *cage, int32_t maxDepth)
+__device__ int32_t ccs_CumulativeHalfedgeCountAtDepth(const cc_Mesh *cage, int32_t maxDepth)
 {
     assert(maxDepth >= 0);
     const int32_t D = maxDepth;
@@ -463,7 +463,7 @@ ccs_CumulativeHalfedgeCountAtDepth(const cc_Mesh *cage, int32_t maxDepth)
     return (H1 * tmp) / 3;
 }
 
- int32_t ccs_CumulativeHalfedgeCount(const cc_Subd *subd)
+ __device__ int32_t ccs_CumulativeHalfedgeCount(const cc_Subd *subd)
 {
     return ccs_CumulativeHalfedgeCountAtDepth(subd->cage, ccs_MaxDepth(subd));
 }
@@ -480,8 +480,7 @@ ccs_CumulativeHalfedgeCountAtDepth(const cc_Mesh *cage, int32_t maxDepth)
  * creases in the control mesh.
  *
  */
- int32_t
-ccs_CumulativeCreaseCountAtDepth(const cc_Mesh *cage, int32_t maxDepth)
+ __device__ int32_t ccs_CumulativeCreaseCountAtDepth(const cc_Mesh *cage, int32_t maxDepth)
 {
     assert(maxDepth >= 0);
     const int32_t D = maxDepth;
@@ -492,7 +491,7 @@ ccs_CumulativeCreaseCountAtDepth(const cc_Mesh *cage, int32_t maxDepth)
     return (C1 * tmp);
 }
 
- int32_t ccs_CumulativeCreaseCount(const cc_Subd *subd)
+ __device__ int32_t ccs_CumulativeCreaseCount(const cc_Subd *subd)
 {
     return ccs_CumulativeCreaseCountAtDepth(subd->cage, ccs_MaxDepth(subd));
 }
@@ -506,8 +505,7 @@ ccs_CumulativeCreaseCountAtDepth(const cc_Mesh *cage, int32_t maxDepth)
  *  Vd+1 = Fd + Ed + Vd
  *
  */
- int32_t
-ccs_CumulativeVertexCountAtDepth(const cc_Mesh *cage, int32_t depth)
+__device__ int32_t ccs_CumulativeVertexCountAtDepth(const cc_Mesh *cage, int32_t depth)
 {
     assert(depth >= 0);
     const int32_t V0 = ccm_VertexCount(cage);
@@ -524,7 +522,7 @@ ccs_CumulativeVertexCountAtDepth(const cc_Mesh *cage, int32_t depth)
     return A * (E1 - (F1 << 1)) + B * F1 + D * (F1 - E1 + V1);
 }
 
- int32_t ccs_CumulativeVertexCount(const cc_Subd *subd)
+ __device__ int32_t ccs_CumulativeVertexCount(const cc_Subd *subd)
 {
     return ccs_CumulativeVertexCountAtDepth(subd->cage, ccs_MaxDepth(subd));
 }
@@ -534,7 +532,7 @@ ccs_CumulativeVertexCountAtDepth(const cc_Mesh *cage, int32_t depth)
  * MaxDepth -- Retrieve the maximum subdivision depth of the subd
  *
  */
- int32_t ccs_MaxDepth(const cc_Subd *subd)
+ __device__ int32_t ccs_MaxDepth(const cc_Subd *subd)
 {
     return subd->maxDepth;
 }
@@ -544,7 +542,7 @@ ccs_CumulativeVertexCountAtDepth(const cc_Mesh *cage, int32_t depth)
  * Create -- Create a subd
  *
  */
- cc_Subd *ccs_Create(const cc_Mesh *cage, int32_t maxDepth)
+ __device__ cc_Subd *ccs_Create(const cc_Mesh *cage, int32_t maxDepth)
 {
     const int32_t halfedgeCount = ccs_CumulativeHalfedgeCountAtDepth(cage, maxDepth);
     const int32_t creaseCount = ccs_CumulativeCreaseCountAtDepth(cage, maxDepth);
@@ -588,14 +586,12 @@ ccs_CumulativeVertexCountAtDepth(const cc_Mesh *cage, int32_t depth)
  */
 
 
- float
-ccs_CreaseSharpness_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth)
+ __device__ float ccs_CreaseSharpness_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth)
 {
     return ccs__Crease(subd, edgeID, depth)->sharpness;
 }
 
- float
-ccs_CreaseSharpness(const cc_Subd *subd, int32_t edgeID, int32_t depth)
+__device__ float ccs_CreaseSharpness(const cc_Subd *subd, int32_t edgeID, int32_t depth)
 {
     const int32_t creaseCount = ccm_CreaseCountAtDepth(subd->cage, depth);
 
@@ -606,14 +602,12 @@ ccs_CreaseSharpness(const cc_Subd *subd, int32_t edgeID, int32_t depth)
     }
 }
 
- int32_t
-ccs_CreaseNextID_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth)
+__device__ int32_t ccs_CreaseNextID_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth)
 {
     return ccs__Crease(subd, edgeID, depth)->nextID;
 }
 
- int32_t
-ccs_CreaseNextID(const cc_Subd *subd, int32_t edgeID, int32_t depth)
+__device__ int32_t ccs_CreaseNextID(const cc_Subd *subd, int32_t edgeID, int32_t depth)
 {
     const int32_t creaseCount = ccm_CreaseCountAtDepth(subd->cage, depth);
 
@@ -624,14 +618,12 @@ ccs_CreaseNextID(const cc_Subd *subd, int32_t edgeID, int32_t depth)
     }
 }
 
- int32_t
-ccs_CreasePrevID_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth)
+__device__ int32_t ccs_CreasePrevID_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth)
 {
     return ccs__Crease(subd, edgeID, depth)->prevID;
 }
 
- int32_t
-ccs_CreasePrevID(const cc_Subd *subd, int32_t edgeID, int32_t depth)
+__device__ int32_t ccs_CreasePrevID(const cc_Subd *subd, int32_t edgeID, int32_t depth)
 {
     const int32_t creaseCount = ccm_CreaseCountAtDepth(subd->cage, depth);
 
@@ -648,25 +640,25 @@ ccs_CreasePrevID(const cc_Subd *subd, int32_t edgeID, int32_t depth)
  *
  */
 
-cc_VertexUv
+__device__ cc_VertexUv
 ccs_HalfedgeVertexUv(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     return cc__DecodeUv(ccs__HalfedgeVertexUvID(subd, halfedgeID, depth));
 }
 
- int32_t
+__device__ int32_t
 ccs_HalfedgeVertexID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     return ccs__Halfedge(subd, halfedgeID, depth)->vertexID;
 }
 
- int32_t
+__device__ int32_t
 ccs_HalfedgeTwinID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     return ccs__Halfedge(subd, halfedgeID, depth)->twinID;
 }
 
- int32_t
+__device__ int32_t
 ccs_HalfedgeNextID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     (void)subd;
@@ -675,7 +667,7 @@ ccs_HalfedgeNextID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
     return ccm_HalfedgeNextID_Quad(halfedgeID);
 }
 
- int32_t
+__device__ int32_t
 ccs_HalfedgePrevID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     (void)subd;
@@ -684,7 +676,7 @@ ccs_HalfedgePrevID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
     return ccm_HalfedgePrevID_Quad(halfedgeID);
 }
 
- int32_t
+__device__ int32_t
 ccs_HalfedgeFaceID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     (void)subd;
@@ -693,13 +685,13 @@ ccs_HalfedgeFaceID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
     return ccm_HalfedgeFaceID_Quad(halfedgeID);
 }
 
- int32_t
+__device__ int32_t
 ccs_HalfedgeEdgeID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     return ccs__Halfedge(subd, halfedgeID, depth)->edgeID;
 }
 
- float
+__device__ float
 ccs_HalfedgeSharpness(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
@@ -707,7 +699,7 @@ ccs_HalfedgeSharpness(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
     return ccs_CreaseSharpness(subd, edgeID, depth);
 }
 
- cc_VertexPoint
+__device__ cc_VertexPoint
 ccs_HalfedgeVertexPoint(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     const int32_t vertexID = ccs_HalfedgeVertexID(subd, halfedgeID, depth);
@@ -720,7 +712,7 @@ ccs_HalfedgeVertexPoint(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
  * Vertex data accessors
  *
  */
- cc_VertexPoint
+__device__ cc_VertexPoint
 ccs_VertexPoint(const cc_Subd *subd, int32_t vertexID, int32_t depth)
 {
     assert(depth <= ccs_MaxDepth(subd) && depth > 0);
@@ -734,7 +726,7 @@ ccs_VertexPoint(const cc_Subd *subd, int32_t vertexID, int32_t depth)
  * Vertex halfedge iteration
  *
  */
- int32_t
+__device__ int32_t
 ccs_PrevVertexHalfedgeID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     const int32_t prevID = ccs_HalfedgePrevID(subd, halfedgeID, depth);
@@ -742,7 +734,7 @@ ccs_PrevVertexHalfedgeID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
     return ccs_HalfedgeTwinID(subd, prevID, depth);
 }
 
- int32_t
+__device__ int32_t
 ccs_NextVertexHalfedgeID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     const int32_t twinID = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
@@ -755,7 +747,7 @@ ccs_NextVertexHalfedgeID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
  * Face to Halfedge Mapping
  *
  */
- int32_t
+__device__ int32_t
 ccs_FaceToHalfedgeID(const cc_Subd *subd, int32_t faceID, int32_t depth)
 {
     (void)subd;
@@ -773,7 +765,7 @@ ccs_FaceToHalfedgeID(const cc_Subd *subd, int32_t faceID, int32_t depth)
  *
  */
 
- int32_t
+__device__ int32_t
 ccs_EdgeToHalfedgeID(
     const cc_Subd *subd,
     int32_t edgeID,

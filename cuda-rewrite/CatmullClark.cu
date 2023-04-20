@@ -2,6 +2,8 @@
 #include <omp.h>
 #include <cuda.h>
 
+#define NUM_THREADS 64
+
 int32_t
 ccs_VertexPointToHalfedgeID(const cc_Subd *subd, int32_t vertexID, int32_t depth)
 {
@@ -1618,14 +1620,16 @@ static void ccs__RefineVertexUvs(cc_Subd *subd, int32_t depth)
  * step and stores them in the subd.
  *
  */
-static void ccs__RefineCageCreases(cc_Subd *subd)
+__global__ void ccs__RefineCageCreases(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
-    const int32_t edgeCount = ccm_EdgeCount(cage);
+    const int32_t edgeCount = cage->edgeCount;
     cc_Crease *creasesOut = subd->creases;
 
-#pragma omp for
-    for (int32_t edgeID = 0; edgeID < edgeCount; ++edgeID) {
+    int edges_per_thread = std::ceil(float(edgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t edgeID = start; edgeID < end && edgeID < edgeCount; ++edgeID) {
         const int32_t nextID = ccm_CreaseNextID(cage, edgeID);
         const int32_t prevID = ccm_CreasePrevID(cage, edgeID);
         const bool t1 = ccm_CreasePrevID(cage, nextID) == edgeID && nextID != edgeID;
@@ -1650,7 +1654,6 @@ static void ccs__RefineCageCreases(cc_Subd *subd)
         newCreases[0]->sharpness = cc__Maxf(0.0f, (prevS + thisS) / 4.0f - 1.0f);
         newCreases[1]->sharpness = cc__Maxf(0.0f, (thisS + nextS) / 4.0f - 1.0f);
     }
-#pragma omp barrier
 }
 
 
@@ -1660,14 +1663,13 @@ static void ccs__RefineCageCreases(cc_Subd *subd)
  * This routine computes the topology of the next subd level.
  *
  */
-static void ccs__RefineCreases(cc_Subd *subd, int32_t depth)
+__global__ void ccs__RefineCreases(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t creaseCount = ccm_CreaseCountAtDepth(cage, depth);
     const int32_t stride = ccs_CumulativeCreaseCountAtDepth(cage, depth);
     cc_Crease *creasesOut = &subd->creases[stride];
 
-#pragma omp for
     for (int32_t edgeID = 0; edgeID < creaseCount; ++edgeID) {
         const int32_t nextID = ccs_CreaseNextID_Fast(subd, edgeID, depth);
         const int32_t prevID = ccs_CreasePrevID_Fast(subd, edgeID, depth);
@@ -1693,7 +1695,6 @@ static void ccs__RefineCreases(cc_Subd *subd, int32_t depth)
         newCreases[0]->sharpness = cc__Maxf(0.0f, (prevS + thisS) / 4.0f - 1.0f);
         newCreases[1]->sharpness = cc__Maxf(0.0f, (thisS + nextS) / 4.0f - 1.0f);
     }
-#pragma omp barrier
 }
 
 
@@ -1705,10 +1706,10 @@ static void ccs__RefineCreases(cc_Subd *subd, int32_t depth)
 {
     const int32_t maxDepth = ccs_MaxDepth(subd);
 
-    ccs__RefineCageCreases(subd);
+    ccs__RefineCageCreases<<<1, NUM_THREADS>>>(subd);
 
     for (int32_t depth = 1; depth < maxDepth; ++depth) {
-        ccs__RefineCreases(subd, depth);
+        ccs__RefineCreases<<<1, NUM_THREADS>>>(subd, depth);
     }
 }
 
