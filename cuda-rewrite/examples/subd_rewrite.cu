@@ -12,7 +12,7 @@
  * ExportToObj -- Exports subd to the OBJ file format
  *
  */
-static void
+void
 ExportToObj(
     const cc_Subd *subd,
     int32_t depth,

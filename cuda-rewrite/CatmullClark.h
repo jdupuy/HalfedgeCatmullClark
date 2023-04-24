@@ -1,3 +1,5 @@
+#pragma once
+#include "Utilities.h"
 #include "Mesh.h"
 
 // (re-)compute catmull clark subdivision
@@ -16,11 +18,6 @@
  void ccs_Refine_NoCreases_Scatter(cc_Subd *subd);
  void ccs_RefineVertexPoints_NoCreases_Gather(cc_Subd *subd);
  void ccs_RefineVertexPoints_NoCreases_Scatter(cc_Subd *subd);
-
-#ifndef CC_LOG
-#    include <stdio.h>
-#    define CC_LOG(format, ...) do { fprintf(stdout, format "\n", ##__VA_ARGS__); fflush(stdout); } while(0)
-#endif
 
 #ifndef CC_MEMCPY
 #    include <string.h>
