@@ -221,6 +221,8 @@ int main(int argc, char **argv)
             stats.max * 1e3);
     }
 
+    cudaDeviceSynchronize();
+
     {
         const BenchStats stats = Bench(&ccs_RefineHalfedges, subd);
 
@@ -230,6 +232,8 @@ int main(int argc, char **argv)
             stats.min * 1e3,
             stats.max * 1e3);
     }
+
+    cudaDeviceSynchronize();
 
     {
         const BenchStats stats = Bench(&ccs_RefineVertexPoints_Scatter, subd);
@@ -252,7 +256,7 @@ int main(int argc, char **argv)
 //             stats.max * 1e3);
 //     }
 // #endif
-
+    
     if (exportToObj > 0) {
         char buffer[64];
 
@@ -267,8 +271,8 @@ int main(int argc, char **argv)
 
     LOG("All done!");
 
-    ccm_Release(cage);
-    ccs_Release(subd);
+    // ccm_Release(cage);
+    // ccs_Release(subd);
 
     return 0;
 }

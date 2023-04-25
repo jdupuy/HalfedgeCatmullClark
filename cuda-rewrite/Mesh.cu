@@ -1,5 +1,7 @@
 #include "Utilities.h"
 #include "Mesh.h"
+#include <cuda.h>
+#include <iostream>
 
 /*******************************************************************************
  * Create header
@@ -388,20 +390,32 @@ ccm_Create(
     const int32_t vertexByteCount = vertexCount * sizeof(cc_VertexPoint);
     const int32_t uvByteCount = uvCount * sizeof(cc_VertexUv);
     const int32_t creaseByteCount = edgeCount * sizeof(cc_Crease);
-    cc_Mesh *mesh = (cc_Mesh *)malloc(sizeof(*mesh));
-
+    cc_Mesh *mesh;
+    cudaMallocManaged(&mesh, sizeof(*mesh));
+    // cudaMalloc((void**)&mesh, 20* sizeof(*mesh));
+    // cc_Mesh *mesh = (cc_Mesh *)malloc(sizeof(*mesh));
+    
     mesh->vertexCount = vertexCount;
     mesh->uvCount = uvCount;
     mesh->halfedgeCount = halfedgeCount;
     mesh->edgeCount = edgeCount;
     mesh->faceCount = faceCount;
-    mesh->vertexToHalfedgeIDs = (int32_t *)malloc(sizeof(int32_t) * vertexCount);
-    mesh->edgeToHalfedgeIDs = (int32_t *)malloc(sizeof(int32_t) * edgeCount);
-    mesh->faceToHalfedgeIDs = (int32_t *)malloc(sizeof(int32_t) * faceCount);
-    mesh->halfedges = (cc_Halfedge *)malloc(halfedgeByteCount);
-    mesh->creases = (cc_Crease *)malloc(creaseByteCount);
-    mesh->vertexPoints = (cc_VertexPoint *)malloc(vertexByteCount);
-    mesh->uvs = (cc_VertexUv *)malloc(uvByteCount);
+
+    cudaMallocManaged((void**)&mesh->vertexToHalfedgeIDs, (sizeof(int32_t) * vertexCount));
+    cudaMallocManaged((void**)&mesh->edgeToHalfedgeIDs, sizeof(int32_t) * edgeCount);
+    cudaMallocManaged((void**)&mesh->faceToHalfedgeIDs, sizeof(int32_t) * faceCount);
+    cudaMallocManaged((void**)&mesh->halfedges, halfedgeByteCount);
+    cudaMallocManaged((void**)&mesh->creases, creaseByteCount);
+    cudaMallocManaged((void**)&mesh->vertexPoints, vertexByteCount);
+    cudaMallocManaged((void**)&mesh->uvs, uvByteCount);
+
+    // mesh->vertexToHalfedgeIDs = (int32_t *)malloc(sizeof(int32_t) * vertexCount);
+    // mesh->edgeToHalfedgeIDs = (int32_t *)malloc(sizeof(int32_t) * edgeCount);
+    // mesh->faceToHalfedgeIDs = (int32_t *)malloc(sizeof(int32_t) * faceCount);
+    // mesh->halfedges = (cc_Halfedge *)malloc(halfedgeByteCount);
+    // mesh->creases = (cc_Crease *)malloc(creaseByteCount);
+    // mesh->vertexPoints = (cc_VertexPoint *)malloc(vertexByteCount);
+    // mesh->uvs = (cc_VertexUv *)malloc(uvByteCount);
 
     return mesh;
 }
@@ -413,14 +427,14 @@ ccm_Create(
  */
  void ccm_Release(cc_Mesh *mesh)
 {
-    free(mesh->vertexToHalfedgeIDs);
-    free(mesh->faceToHalfedgeIDs);
-    free(mesh->edgeToHalfedgeIDs);
-    free(mesh->halfedges);
-    free(mesh->creases);
-    free(mesh->vertexPoints);
-    free(mesh->uvs);
-    free(mesh);
+    // cudaFree(mesh->vertexToHalfedgeIDs);
+    // cudaFree(mesh->faceToHalfedgeIDs);
+    // cudaFree(mesh->edgeToHalfedgeIDs);
+    // cudaFree(mesh->halfedges);
+    // cudaFree(mesh->creases);
+    // cudaFree(mesh->vertexPoints);
+    // cudaFree(mesh->uvs);
+    cudaFree(mesh);
 }
 
 /*******************************************************************************
@@ -717,12 +731,16 @@ cc_Subd *ccs_Create(const cc_Mesh *cage, int32_t maxDepth)
     const size_t halfedgeByteCount = halfedgeCount * sizeof(cc_Halfedge_SemiRegular);
     const size_t creaseByteCount = creaseCount * sizeof(cc_Crease);
     const size_t vertexPointByteCount = vertexCount * sizeof(cc_VertexPoint);
-    cc_Subd *subd = (cc_Subd *)malloc(sizeof(*subd));
+    cc_Subd *subd;
+    cudaMallocManaged((void**)&subd, sizeof(*subd));
 
     subd->maxDepth = maxDepth;
-    subd->halfedges = (cc_Halfedge_SemiRegular *)malloc(halfedgeByteCount);
-    subd->creases = (cc_Crease *)malloc(creaseByteCount);
-    subd->vertexPoints = (cc_VertexPoint *)malloc(vertexPointByteCount);
+    cudaMallocManaged((void**)&subd->halfedges, halfedgeByteCount);
+    cudaMallocManaged((void**)&subd->creases, creaseByteCount);
+    cudaMallocManaged((void**)&subd->vertexPoints, vertexPointByteCount);
+    // subd->halfedges = (cc_Halfedge_SemiRegular *)malloc(halfedgeByteCount);
+    // subd->creases = (cc_Crease *)malloc(creaseByteCount);
+    // subd->vertexPoints = (cc_VertexPoint *)malloc(vertexPointByteCount);
     subd->cage = cage;
 
     return subd;
@@ -735,10 +753,10 @@ cc_Subd *ccs_Create(const cc_Mesh *cage, int32_t maxDepth)
  */
  void ccs_Release(cc_Subd *subd)
 {
-    free(subd->halfedges);
-    free(subd->creases);
-    free(subd->vertexPoints);
-    free(subd);
+    // cudaFree(subd->halfedges);
+    // cudaFree(subd->creases);
+    // cudaFree(subd->vertexPoints);
+    cudaFree(subd);
 }
 
 

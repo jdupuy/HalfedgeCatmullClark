@@ -12,6 +12,7 @@
 #ifndef CC_DISABLE_UV
  void ccs_RefineVertexUvs(cc_Subd *subd);
 #endif
+void ccs__RefineTopology(cc_Subd *subd);
 
 // (re-)compute catmull clark vertex points without semi-sharp creases
  void ccs_Refine_NoCreases_Gather(cc_Subd *subd);
@@ -26,5 +27,5 @@
 
 #ifndef CC_MEMSET
 #    include <string.h>
-#    define CC_MEMSET(ptr, value, num) memset(ptr, value, num)
+#    define CC_MEMSET(ptr, value, num) cudaMemset(ptr, value, num)
 #endif

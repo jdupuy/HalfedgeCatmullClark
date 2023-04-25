@@ -6,7 +6,7 @@
 
 #define NUM_THREADS 64
 
-int32_t
+__device__ int32_t
 ccs_VertexPointToHalfedgeID(const cc_Subd *subd, int32_t vertexID, int32_t depth)
 {
 #if 0 // recursive version
@@ -80,15 +80,17 @@ ccs_VertexPointToHalfedgeID(const cc_Subd *subd, int32_t vertexID, int32_t depth
  * adds its contribution to the computation of the face vertex.
  *
  */
-static void ccs__CageFacePoints_Gather(cc_Subd *subd)
+__global__ void ccs__CageFacePoints_Gather(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCount(cage);
     const int32_t faceCount = ccm_FaceCount(cage);
     cc_VertexPoint *newFacePoints = &subd->vertexPoints[vertexCount];
 
-#pragma omp for
-    for (int32_t faceID = 0; faceID < faceCount; ++faceID) {
+    int edges_per_thread = std::ceil(float(faceCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t faceID = start; faceID < faceCount || faceID < end; ++faceID) {
         const int32_t halfedgeID = ccm_FaceToHalfedgeID(cage, faceID);
         cc_VertexPoint newFacePoint = ccm_HalfedgeVertexPoint(cage, halfedgeID);
         float faceVertexCount = 1.0f;
@@ -106,18 +108,20 @@ static void ccs__CageFacePoints_Gather(cc_Subd *subd)
 
         newFacePoints[faceID] = newFacePoint;
     }
-#pragma omp barrier
+
 }
 
-static void ccs__CageFacePoints_Scatter(cc_Subd *subd)
+__global__ void ccs__CageFacePoints_Scatter(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCount(cage);
     const int32_t halfedgeCount = ccm_HalfedgeCount(cage);
     cc_VertexPoint *newFacePoints = &subd->vertexPoints[vertexCount];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const cc_VertexPoint vertexPoint = ccm_HalfedgeVertexPoint(cage, halfedgeID);
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
         float faceVertexCount = 1.0f;
@@ -130,11 +134,12 @@ static void ccs__CageFacePoints_Scatter(cc_Subd *subd)
         }
 
         for (int32_t i = 0; i < 3; ++i) {
-#pragma omp atomic
-            newFacePoint[i]+= vertexPoint.array[i] / (float)faceVertexCount;
+// #pragma omp atomic
+            // newFacePoint[i]+= vertexPoint.array[i] / (float)faceVertexCount;
+            atomicAdd(newFacePoint + i, vertexPoint.array[i] / (float)faceVertexCount);
         }
     }
-#pragma omp barrier
+
 }
 
 
@@ -148,7 +153,7 @@ static void ccs__CageFacePoints_Scatter(cc_Subd *subd)
  * adds its contribution to the computation of the edge vertex.
  *
  */
-static void ccs__CageEdgePoints_Gather(cc_Subd *subd)
+__global__ void ccs__CageEdgePoints_Gather(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCount(cage);
@@ -157,8 +162,10 @@ static void ccs__CageEdgePoints_Gather(cc_Subd *subd)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[vertexCount];
     cc_VertexPoint *newEdgePoints = &subd->vertexPoints[vertexCount + faceCount];
 
-#pragma omp for
-    for (int32_t edgeID = 0; edgeID < edgeCount; ++edgeID) {
+int edges_per_thread = std::ceil(float(edgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t edgeID = start; edgeID < edgeCount || edgeID < end; ++edgeID) {
         const int32_t halfedgeID = ccm_EdgeToHalfedgeID(cage, edgeID);
         const int32_t twinID = ccm_HalfedgeTwinID(cage, halfedgeID);
         const int32_t nextID = ccm_HalfedgeNextID(cage, halfedgeID);
@@ -186,10 +193,10 @@ static void ccs__CageEdgePoints_Gather(cc_Subd *subd)
                    smoothEdgePoint.array,
                    edgeWeight);
     }
-#pragma omp barrier
+
 }
 
-static void ccs__CageEdgePoints_Scatter(cc_Subd *subd)
+__global__ void ccs__CageEdgePoints_Scatter(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t faceCount = ccm_FaceCount(cage);
@@ -198,8 +205,10 @@ static void ccs__CageEdgePoints_Scatter(cc_Subd *subd)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[vertexCount];
     cc_VertexPoint *newEdgePoints = &subd->vertexPoints[vertexCount + faceCount];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t twinID = ccm_HalfedgeTwinID(cage, halfedgeID);
@@ -215,11 +224,12 @@ static void ccs__CageEdgePoints_Scatter(cc_Subd *subd)
         cc__Lerp3f(atomicWeight, tmp1, tmp4, weight);
 
         for (int32_t i = 0; i < 3; ++i) {
-#pragma omp atomic
-            newEdgePoints[edgeID].array[i]+= atomicWeight[i];
+// #pragma omp atomic
+            // newEdgePoints[edgeID].array[i]+= atomicWeight[i];
+            atomicAdd(newEdgePoints[edgeID].array + i, atomicWeight[i]);
         }
     }
-#pragma omp barrier
+
 }
 
 
@@ -233,7 +243,7 @@ static void ccs__CageEdgePoints_Scatter(cc_Subd *subd)
  * adds its contribution to the computation of the edge vertex.
  *
  */
-static void ccs__CreasedCageEdgePoints_Gather(cc_Subd *subd)
+__global__ void ccs__CreasedCageEdgePoints_Gather(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCount(cage);
@@ -242,8 +252,10 @@ static void ccs__CreasedCageEdgePoints_Gather(cc_Subd *subd)
     cc_VertexPoint *newFacePoints = &subd->vertexPoints[vertexCount];
     cc_VertexPoint *newEdgePoints = &subd->vertexPoints[vertexCount + faceCount];
 
-#pragma omp for
-    for (int32_t edgeID = 0; edgeID < edgeCount; ++edgeID) {
+int edges_per_thread = std::ceil(float(edgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t edgeID = start; edgeID < edgeCount || edgeID < end; ++edgeID) {
         const int32_t halfedgeID = ccm_EdgeToHalfedgeID(cage, edgeID);
         const int32_t twinID = ccm_HalfedgeTwinID(cage, halfedgeID);
         const int32_t nextID = ccm_HalfedgeNextID(cage, halfedgeID);
@@ -271,10 +283,10 @@ static void ccs__CreasedCageEdgePoints_Gather(cc_Subd *subd)
                    sharpEdgePoint.array,
                    edgeWeight);
     }
-#pragma omp barrier
+
 }
 
-static void ccs__CreasedCageEdgePoints_Scatter(cc_Subd *subd)
+__global__ void ccs__CreasedCageEdgePoints_Scatter(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t faceCount = ccm_FaceCount(cage);
@@ -283,8 +295,10 @@ static void ccs__CreasedCageEdgePoints_Scatter(cc_Subd *subd)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[vertexCount];
     cc_VertexPoint *newEdgePoints = &subd->vertexPoints[vertexCount + faceCount];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t twinID = ccm_HalfedgeTwinID(cage, halfedgeID);
@@ -315,11 +329,12 @@ static void ccs__CreasedCageEdgePoints_Scatter(cc_Subd *subd)
                    edgeWeight);
 
         for (int32_t i = 0; i < 3; ++i) {
-#pragma omp atomic
-            newEdgePoints[edgeID].array[i]+= atomicWeight[i];
+// #pragma omp atomic
+            // newEdgePoints[edgeID].array[i]+= atomicWeight[i];
+            atomicAdd(newEdgePoints[edgeID].array + i, atomicWeight[i]);
         }
     }
-#pragma omp barrier
+
 }
 
 
@@ -333,7 +348,7 @@ static void ccs__CreasedCageEdgePoints_Scatter(cc_Subd *subd)
  * adds its contribution to the computation of the smooth vertex.
  *
  */
-static void ccs__CageVertexPoints_Gather(cc_Subd *subd)
+__global__ void ccs__CageVertexPoints_Gather(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCount(cage);
@@ -342,8 +357,10 @@ static void ccs__CageVertexPoints_Gather(cc_Subd *subd)
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = subd->vertexPoints;
 
-#pragma omp for
-    for (int32_t vertexID = 0; vertexID < vertexCount; ++vertexID) {
+    int edges_per_thread = std::ceil(float(vertexCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t vertexID = start; vertexID < vertexCount || vertexID < end; ++vertexID) {
         const int32_t halfedgeID = ccm_VertexToHalfedgeID(cage, vertexID);
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
@@ -382,10 +399,10 @@ static void ccs__CageVertexPoints_Gather(cc_Subd *subd)
                    smoothPoint.array,
                    iterator != halfedgeID ? 0.0f : 1.0f);
     }
-#pragma omp barrier
+
 }
 
-static void ccs__CageVertexPoints_Scatter(cc_Subd *subd)
+__global__ void ccs__CageVertexPoints_Scatter(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t faceCount = ccm_FaceCount(cage);
@@ -395,8 +412,10 @@ static void ccs__CageVertexPoints_Scatter(cc_Subd *subd)
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = subd->vertexPoints;
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const int32_t vertexID = ccm_HalfedgeVertexID(cage, halfedgeID);
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
@@ -422,12 +441,13 @@ static void ccs__CageVertexPoints_Scatter(cc_Subd *subd)
             const float f = newFacePoints[faceID].array[i];
             const float e = newEdgePoints[edgeID].array[i];
             const float s = forwardIterator < 0 ? 0.0f : 1.0f;
-#pragma omp atomic
-            newVertexPoints[vertexID].array[i]+=
-                w * (v + w * s * (4.0f * e - f - 3.0f * v));
+// #pragma omp atomic
+            // newVertexPoints[vertexID].array[i]+=
+                // w * (v + w * s * (4.0f * e - f - 3.0f * v));
+            atomicAdd(newVertexPoints[vertexID].array + i, w * (v + w * s * (4.0f * e - f - 3.0f * v)));
         }
     }
-#pragma omp barrier
+
 }
 
 
@@ -441,7 +461,7 @@ static void ccs__CageVertexPoints_Scatter(cc_Subd *subd)
  * adds its contribution to the computation of the smooth vertex.
  *
  */
-static void ccs__CreasedCageVertexPoints_Gather(cc_Subd *subd)
+__global__ void ccs__CreasedCageVertexPoints_Gather(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCount(cage);
@@ -450,8 +470,10 @@ static void ccs__CreasedCageVertexPoints_Gather(cc_Subd *subd)
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = subd->vertexPoints;
 
-#pragma omp for
-    for (int32_t vertexID = 0; vertexID < vertexCount; ++vertexID) {
+int edges_per_thread = std::ceil(float(vertexCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t vertexID = start; vertexID < vertexCount || vertexID < end; ++vertexID) {
         const int32_t halfedgeID = ccm_VertexToHalfedgeID(cage, vertexID);
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t prevID = ccm_HalfedgePrevID(cage, halfedgeID);
@@ -540,11 +562,11 @@ static void ccs__CreasedCageVertexPoints_Gather(cc_Subd *subd)
                        cc__Satf(avgS * 0.5f));
         }
     }
-#pragma omp barrier
+
 }
 
 
-static void ccs__CreasedCageVertexPoints_Scatter(cc_Subd *subd)
+__global__ void ccs__CreasedCageVertexPoints_Scatter(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t faceCount = ccm_FaceCount(cage);
@@ -555,8 +577,10 @@ static void ccs__CreasedCageVertexPoints_Scatter(cc_Subd *subd)
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = subd->vertexPoints;
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const int32_t vertexID = ccm_HalfedgeVertexID(cage, halfedgeID);
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
@@ -658,11 +682,12 @@ static void ccs__CreasedCageVertexPoints_Scatter(cc_Subd *subd)
         }
 
         for (int32_t i = 0; i < 3; ++i) {
-#pragma omp atomic
-            newVertexPoints[vertexID].array[i]+= atomicWeight.array[i];
+// #pragma omp atomic
+            // newVertexPoints[vertexID].array[i]+= atomicWeight.array[i];
+            atomicAdd(newVertexPoints[vertexID].array + i, atomicWeight.array[i]);
         }
     }
-#pragma omp barrier
+
 }
 
 
@@ -676,7 +701,7 @@ static void ccs__CreasedCageVertexPoints_Scatter(cc_Subd *subd)
  * adds its contribution to the computation of the face vertex.
  *
  */
-static void ccs__FacePoints_Gather(cc_Subd *subd, int32_t depth)
+__global__ void ccs__FacePoints_Gather(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCountAtDepth_Fast(cage, depth);
@@ -684,8 +709,10 @@ static void ccs__FacePoints_Gather(cc_Subd *subd, int32_t depth)
     const int32_t stride = ccs_CumulativeVertexCountAtDepth(cage, depth);
     cc_VertexPoint *newFacePoints = &subd->vertexPoints[stride + vertexCount];
 
-#pragma omp for
-    for (int32_t faceID = 0; faceID < faceCount; ++faceID) {
+int edges_per_thread = std::ceil(float(faceCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t faceID = start; faceID < faceCount || faceID < end; ++faceID) {
         const int32_t halfedgeID = ccs_FaceToHalfedgeID(subd, faceID, depth);
         cc_VertexPoint newFacePoint = ccs_HalfedgeVertexPoint(subd, halfedgeID, depth);
 
@@ -701,10 +728,10 @@ static void ccs__FacePoints_Gather(cc_Subd *subd, int32_t depth)
 
         newFacePoints[faceID] = newFacePoint;
     }
-#pragma omp barrier
+
 }
 
-static void ccs__FacePoints_Scatter(cc_Subd *subd, int32_t depth)
+__global__ void ccs__FacePoints_Scatter(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t halfedgeCount = ccm_HalfedgeCountAtDepth(cage, depth);
@@ -712,18 +739,20 @@ static void ccs__FacePoints_Scatter(cc_Subd *subd, int32_t depth)
     const int32_t stride = ccs_CumulativeVertexCountAtDepth(cage, depth);
     cc_VertexPoint *newFacePoints = &subd->vertexPoints[stride + vertexCount];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const cc_VertexPoint vertexPoint = ccs_HalfedgeVertexPoint(subd, halfedgeID, depth);
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
         float *newFacePoint = newFacePoints[faceID].array;
 
         for (int32_t i = 0; i < 3; ++i) {
-    #pragma omp atomic
-            newFacePoint[i]+= vertexPoint.array[i] / (float)4.0f;
+            atomicAdd(newFacePoint, vertexPoint.array[i] / (float)4.0f);
+            // newFacePoint[i]+= vertexPoint.array[i] / (float)4.0f;
         }
     }
-#pragma omp barrier
+
 }
 
 
@@ -737,7 +766,7 @@ static void ccs__FacePoints_Scatter(cc_Subd *subd, int32_t depth)
  * adds its contribution to the computation of the edge vertex.
  *
  */
-static void ccs__EdgePoints_Gather(cc_Subd *subd, int32_t depth)
+__global__ void ccs__EdgePoints_Gather(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCountAtDepth_Fast(cage, depth);
@@ -747,8 +776,10 @@ static void ccs__EdgePoints_Gather(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[stride + vertexCount];
     cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride + vertexCount + faceCount];
 
-#pragma omp for
-    for (int32_t edgeID = 0; edgeID < edgeCount; ++edgeID) {
+int edges_per_thread = std::ceil(float(edgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t edgeID = start; edgeID < edgeCount || edgeID < end; ++edgeID) {
         const int32_t halfedgeID = ccs_EdgeToHalfedgeID(subd, edgeID, depth);
         const int32_t twinID = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
         const int32_t nextID = ccs_HalfedgeNextID(subd, halfedgeID, depth);
@@ -776,10 +807,10 @@ static void ccs__EdgePoints_Gather(cc_Subd *subd, int32_t depth)
                    smoothEdgePoint.array,
                    edgeWeight);
     }
-#pragma omp barrier
+
 }
 
-static void ccs__EdgePoints_Scatter(cc_Subd *subd, int32_t depth)
+__global__ void ccs__EdgePoints_Scatter(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t halfedgeCount = ccm_HalfedgeCountAtDepth(cage, depth);
@@ -789,8 +820,10 @@ static void ccs__EdgePoints_Scatter(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[stride + vertexCount];
     cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride + vertexCount + faceCount];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
         const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
         const int32_t twinID = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
@@ -806,11 +839,12 @@ static void ccs__EdgePoints_Scatter(cc_Subd *subd, int32_t depth)
         cc__Lerp3f(atomicWeight, tmp1, tmp4, weight);
 
         for (int32_t i = 0; i < 3; ++i) {
-    #pragma omp atomic
-            newEdgePoints[edgeID].array[i]+= atomicWeight[i];
+    // #pragma omp atomic
+            // newEdgePoints[edgeID].array[i]+= atomicWeight[i];
+            atomicAdd(newEdgePoints[edgeID].array + i, atomicWeight[i]);
         }
     }
-#pragma omp barrier
+
 }
 
 /*******************************************************************************
@@ -823,7 +857,7 @@ static void ccs__EdgePoints_Scatter(cc_Subd *subd, int32_t depth)
  * adds its contribution to the computation of the edge vertex.
  *
  */
-static void ccs__CreasedEdgePoints_Gather(cc_Subd *subd, int32_t depth)
+__global__ void ccs__CreasedEdgePoints_Gather(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCountAtDepth_Fast(cage, depth);
@@ -833,8 +867,10 @@ static void ccs__CreasedEdgePoints_Gather(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[stride + vertexCount];
     cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride +vertexCount + faceCount];
 
-#pragma omp for
-    for (int32_t edgeID = 0; edgeID < edgeCount; ++edgeID) {
+    int edges_per_thread = std::ceil(float(edgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t edgeID = start; edgeID < edgeCount || edgeID < end; ++edgeID) {
         const int32_t halfedgeID = ccs_EdgeToHalfedgeID(subd, edgeID, depth);
         const int32_t twinID = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
         const int32_t nextID = ccs_HalfedgeNextID(subd, halfedgeID, depth);
@@ -862,11 +898,11 @@ static void ccs__CreasedEdgePoints_Gather(cc_Subd *subd, int32_t depth)
                    sharpEdgePoint.array,
                    edgeWeight);
     }
-#pragma omp barrier
+
 }
 
 
-static void ccs__CreasedEdgePoints_Scatter(cc_Subd *subd, int32_t depth)
+__global__ void ccs__CreasedEdgePoints_Scatter(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCountAtDepth_Fast(cage, depth);
@@ -876,8 +912,10 @@ static void ccs__CreasedEdgePoints_Scatter(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[stride + vertexCount];
     cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride + vertexCount + faceCount];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+    int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const int32_t twinID = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
         const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
@@ -908,11 +946,12 @@ static void ccs__CreasedEdgePoints_Scatter(cc_Subd *subd, int32_t depth)
                    edgeWeight);
 
         for (int32_t i = 0; i < 3; ++i) {
-#pragma omp atomic
-            newEdgePoints[edgeID].array[i]+= atomicWeight[i];
+// #pragma omp atomic
+            // newEdgePoints[edgeID].array[i]+= atomicWeight[i];
+            atomicAdd(newEdgePoints[edgeID].array + i, atomicWeight[i]);
         }
     }
-#pragma omp barrier
+    
 }
 
 
@@ -926,7 +965,7 @@ static void ccs__CreasedEdgePoints_Scatter(cc_Subd *subd, int32_t depth)
  * adds its contribution to the computation of the smooth vertex.
  *
  */
-static void ccs__VertexPoints_Gather(cc_Subd *subd, int32_t depth)
+__global__ void ccs__VertexPoints_Gather(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCountAtDepth_Fast(cage, depth);
@@ -935,9 +974,11 @@ static void ccs__VertexPoints_Gather(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[stride + vertexCount];
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride + vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = &subd->vertexPoints[stride];
-
-#pragma omp for
-    for (int32_t vertexID = 0; vertexID < vertexCount; ++vertexID) {
+    
+    int edges_per_thread = std::ceil(float(vertexCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t vertexID = start; vertexID < vertexCount || vertexID < end; ++vertexID) {
         const int32_t halfedgeID = ccs_VertexPointToHalfedgeID(subd, vertexID, depth);
         const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
@@ -976,10 +1017,10 @@ static void ccs__VertexPoints_Gather(cc_Subd *subd, int32_t depth)
                    smoothPoint.array,
                    iterator != halfedgeID ? 0.0f : 1.0f);
     }
-#pragma omp barrier
+    
 }
 
-static void ccs__VertexPoints_Scatter(cc_Subd *subd, int32_t depth)
+__global__ void ccs__VertexPoints_Scatter(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCountAtDepth_Fast(cage, depth);
@@ -990,8 +1031,10 @@ static void ccs__VertexPoints_Scatter(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride + vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = &subd->vertexPoints[stride];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+    int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < halfedgeCount || halfedgeID < end; ++halfedgeID) {
         const int32_t vertexID = ccs_HalfedgeVertexID(subd, halfedgeID, depth);
         const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
@@ -1017,12 +1060,13 @@ static void ccs__VertexPoints_Scatter(cc_Subd *subd, int32_t depth)
             const float f = newFacePoints[faceID].array[i];
             const float e = newEdgePoints[edgeID].array[i];
             const float s = forwardIterator < 0 ? 0.0f : 1.0f;
-#pragma omp atomic
-            newVertexPoints[vertexID].array[i]+=
-                w * (v + w * s * (4.0f * e - f - 3.0f * v));
+// #pragma omp atomic
+            // newVertexPoints[vertexID].array[i]+=
+                // w * (v + w * s * (4.0f * e - f - 3.0f * v));
+            atomicAdd(newVertexPoints[vertexID].array + i, w * (v + w * s * (4.0f * e - f - 3.0f * v)));
         }
     }
-#pragma omp barrier
+    
 }
 
 
@@ -1036,7 +1080,7 @@ static void ccs__VertexPoints_Scatter(cc_Subd *subd, int32_t depth)
  * adds its contribution to the computation of the smooth vertex.
  *
  */
-static void ccs__CreasedVertexPoints_Gather(cc_Subd *subd, int32_t depth)
+__global__ void ccs__CreasedVertexPoints_Gather(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCountAtDepth_Fast(cage, depth);
@@ -1046,8 +1090,10 @@ static void ccs__CreasedVertexPoints_Gather(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride + vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = &subd->vertexPoints[stride];
 
-#pragma omp for
-    for (int32_t vertexID = 0; vertexID < vertexCount; ++vertexID) {
+    int edges_per_thread = std::ceil(float(vertexCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t vertexID = start; vertexID < end || vertexID < vertexCount; ++vertexID) {
         const int32_t halfedgeID = ccs_VertexPointToHalfedgeID(subd, vertexID, depth);
         const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
         const int32_t prevID = ccs_HalfedgePrevID(subd, halfedgeID, depth);
@@ -1164,11 +1210,11 @@ static void ccs__CreasedVertexPoints_Gather(cc_Subd *subd, int32_t depth)
                        cc__Satf(avgS * 0.5f));
         }
     }
-#pragma omp barrier
+    
 }
 
 
-static void ccs__CreasedVertexPoints_Scatter(cc_Subd *subd, int32_t depth)
+__global__ void ccs__CreasedVertexPoints_Scatter(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t halfedgeCount = ccm_HalfedgeCountAtDepth(cage, depth);
@@ -1179,8 +1225,10 @@ static void ccs__CreasedVertexPoints_Scatter(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride + vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = &subd->vertexPoints[stride];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+    int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < end; ++halfedgeID) {
         const int32_t vertexID = ccs_HalfedgeVertexID(subd, halfedgeID, depth);
         const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
@@ -1282,11 +1330,12 @@ static void ccs__CreasedVertexPoints_Scatter(cc_Subd *subd, int32_t depth)
         }
 
         for (int32_t i = 0; i < 3; ++i) {
-#pragma omp atomic
-            newVertexPoints[vertexID].array[i]+= atomicWeight.array[i];
+// #pragma omp atomic
+            // newVertexPoints[vertexID].array[i]+= atomicWeight.array[i];
+            atomicAdd(newVertexPoints[vertexID].array + i, atomicWeight.array[i]);
         }
     }
-#pragma omp barrier
+    
 }
 
 
@@ -1295,7 +1344,7 @@ static void ccs__CreasedVertexPoints_Scatter(cc_Subd *subd, int32_t depth)
  * RefineVertexPoints -- Computes the result of Catmull Clark subdivision.
  *
  */
-static void ccs__ClearVertexPoints(cc_Subd *subd)
+void ccs__ClearVertexPoints(cc_Subd *subd)
 {
     const int32_t vertexCount = ccs_CumulativeVertexCount(subd);
     const int32_t vertexByteCount = vertexCount * sizeof(cc_VertexPoint);
@@ -1306,54 +1355,54 @@ static void ccs__ClearVertexPoints(cc_Subd *subd)
  void ccs_RefineVertexPoints_Scatter(cc_Subd *subd)
 {
     ccs__ClearVertexPoints(subd);
-    ccs__CageFacePoints_Scatter(subd);
-    ccs__CreasedCageEdgePoints_Scatter(subd);
-    ccs__CreasedCageVertexPoints_Scatter(subd);
+    ccs__CageFacePoints_Scatter<<<1, NUM_THREADS>>>(subd);
+    ccs__CreasedCageEdgePoints_Scatter<<<1, NUM_THREADS>>>(subd);
+    ccs__CreasedCageVertexPoints_Scatter<<<1, NUM_THREADS>>>(subd);
 
     for (int32_t depth = 1; depth < ccs_MaxDepth(subd); ++depth) {
-        ccs__FacePoints_Scatter(subd, depth);
-        ccs__CreasedEdgePoints_Scatter(subd, depth);
-        ccs__CreasedVertexPoints_Scatter(subd, depth);
+        ccs__FacePoints_Scatter<<<1, NUM_THREADS>>>(subd, depth);
+        ccs__CreasedEdgePoints_Scatter<<<1, NUM_THREADS>>>(subd, depth);
+        ccs__CreasedVertexPoints_Scatter<<<1, NUM_THREADS>>>(subd, depth);
     }
 }
 
  void ccs_RefineVertexPoints_NoCreases_Scatter(cc_Subd *subd)
 {
     ccs__ClearVertexPoints(subd);
-    ccs__CageFacePoints_Scatter(subd);
-    ccs__CageEdgePoints_Scatter(subd);
-    ccs__CageVertexPoints_Scatter(subd);
+    ccs__CageFacePoints_Scatter<<<1, NUM_THREADS>>>(subd);
+    ccs__CageEdgePoints_Scatter<<<1, NUM_THREADS>>>(subd);
+    ccs__CageVertexPoints_Scatter<<<1, NUM_THREADS>>>(subd);
 
     for (int32_t depth = 1; depth < ccs_MaxDepth(subd); ++depth) {
-        ccs__FacePoints_Scatter(subd, depth);
-        ccs__EdgePoints_Scatter(subd, depth);
-        ccs__VertexPoints_Scatter(subd, depth);
+        ccs__FacePoints_Scatter<<<1, NUM_THREADS>>>(subd, depth);
+        ccs__EdgePoints_Scatter<<<1, NUM_THREADS>>>(subd, depth);
+        ccs__VertexPoints_Scatter<<<1, NUM_THREADS>>>(subd, depth);
     }
 }
 
  void ccs_RefineVertexPoints_Gather(cc_Subd *subd)
 {
-    ccs__CageFacePoints_Gather(subd);
-    ccs__CreasedCageEdgePoints_Gather(subd);
-    ccs__CreasedCageVertexPoints_Gather(subd);
+    ccs__CageFacePoints_Gather<<<1, NUM_THREADS>>>(subd);
+    ccs__CreasedCageEdgePoints_Gather<<<1, NUM_THREADS>>>(subd);
+    ccs__CreasedCageVertexPoints_Gather<<<1, NUM_THREADS>>>(subd);
 
     for (int32_t depth = 1; depth < ccs_MaxDepth(subd); ++depth) {
-        ccs__FacePoints_Gather(subd, depth);
-        ccs__CreasedEdgePoints_Gather(subd, depth);
-        ccs__CreasedVertexPoints_Gather(subd, depth);
+        ccs__FacePoints_Gather<<<1, NUM_THREADS>>>(subd, depth);
+        ccs__CreasedEdgePoints_Gather<<<1, NUM_THREADS>>>(subd, depth);
+        ccs__CreasedVertexPoints_Gather<<<1, NUM_THREADS>>>(subd, depth);
     }
 }
 
  void ccs_RefineVertexPoints_NoCreases_Gather(cc_Subd *subd)
 {
-    ccs__CageFacePoints_Gather(subd);
-    ccs__CageEdgePoints_Gather(subd);
-    ccs__CageVertexPoints_Gather(subd);
+    ccs__CageFacePoints_Gather<<<1, NUM_THREADS>>>(subd);
+    ccs__CageEdgePoints_Gather<<<1, NUM_THREADS>>>(subd);
+    ccs__CageVertexPoints_Gather<<<1, NUM_THREADS>>>(subd);
 
     for (int32_t depth = 1; depth < ccs_MaxDepth(subd); ++depth) {
-        ccs__FacePoints_Gather(subd, depth);
-        ccs__EdgePoints_Gather(subd, depth);
-        ccs__VertexPoints_Gather(subd, depth);
+        ccs__FacePoints_Gather<<<1, NUM_THREADS>>>(subd, depth);
+        ccs__EdgePoints_Gather<<<1, NUM_THREADS>>>(subd, depth);
+        ccs__VertexPoints_Gather<<<1, NUM_THREADS>>>(subd, depth);
     }
 }
 
@@ -1365,7 +1414,7 @@ static void ccs__ClearVertexPoints(cc_Subd *subd)
  * step and stores them in the subd.
  *
  */
-static void ccs__RefineCageHalfedges(cc_Subd *subd)
+__global__ void ccs__RefineCageHalfedges(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t vertexCount = ccm_VertexCount(cage);
@@ -1374,8 +1423,10 @@ static void ccs__RefineCageHalfedges(cc_Subd *subd)
     const int32_t halfedgeCount = ccm_HalfedgeCount(cage);
     cc_Halfedge_SemiRegular *halfedgesOut = subd->halfedges;
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+    int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < end; ++halfedgeID) {
         const int32_t twinID = ccm_HalfedgeTwinID(cage, halfedgeID);
         const int32_t prevID = ccm_HalfedgePrevID(cage, halfedgeID);
         const int32_t nextID = ccm_HalfedgeNextID(cage, halfedgeID);
@@ -1411,7 +1462,6 @@ static void ccs__RefineCageHalfedges(cc_Subd *subd)
         newHalfedges[2]->vertexID = vertexCount + faceID;
         newHalfedges[3]->vertexID = vertexCount + faceCount + prevEdgeID;
     }
-#pragma omp barrier
 }
 
 
@@ -1421,7 +1471,7 @@ static void ccs__RefineCageHalfedges(cc_Subd *subd)
  * This routine computes the halfedges of the next subd level.
  *
  */
-static void ccs__RefineHalfedges(cc_Subd *subd, int32_t depth)
+__global__ void ccs__RefineHalfedges(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t halfedgeCount = ccm_HalfedgeCountAtDepth(cage, depth);
@@ -1431,8 +1481,10 @@ static void ccs__RefineHalfedges(cc_Subd *subd, int32_t depth)
     const int32_t stride = ccs_CumulativeHalfedgeCountAtDepth(cage, depth);
     cc_Halfedge_SemiRegular *halfedgesOut = &subd->halfedges[stride];
 
-    #pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+    int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < end; ++halfedgeID) {
         const int32_t twinID = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
         const int32_t prevID = ccm_HalfedgePrevID_Quad(halfedgeID);
         const int32_t nextID = ccm_HalfedgeNextID_Quad(halfedgeID);
@@ -1467,7 +1519,6 @@ static void ccs__RefineHalfedges(cc_Subd *subd, int32_t depth)
         newHalfedges[2]->vertexID = vertexCount + faceID;
         newHalfedges[3]->vertexID = vertexCount + faceCount + prevEdgeID;
     }
-#pragma omp barrier
 }
 
 
@@ -1479,10 +1530,10 @@ static void ccs__RefineHalfedges(cc_Subd *subd, int32_t depth)
 {
     const int32_t maxDepth = ccs_MaxDepth(subd);
 
-    ccs__RefineCageHalfedges(subd);
+    ccs__RefineCageHalfedges<<<1, NUM_THREADS>>>(subd);
 
     for (int32_t depth = 1; depth < maxDepth; ++depth) {
-        ccs__RefineHalfedges(subd, depth);
+        ccs__RefineHalfedges<<<1, NUM_THREADS>>>(subd, depth);
     }
 }
 
@@ -1497,14 +1548,16 @@ static void ccs__RefineHalfedges(cc_Subd *subd, int32_t depth)
  * within the halfedge buffer.
  *
  */
-static void ccs__RefineCageVertexUvs(cc_Subd *subd)
+__global__ void ccs__RefineCageVertexUvs(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t halfedgeCount = ccm_HalfedgeCount(cage);
     cc_Halfedge_SemiRegular *halfedgesOut = subd->halfedges;
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+    int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < end; ++halfedgeID) {
         const int32_t prevID = ccm_HalfedgePrevID(cage, halfedgeID);
         const int32_t nextID = ccm_HalfedgeNextID(cage, halfedgeID);
         const cc_VertexUv uv = ccm_HalfedgeVertexUv(cage, halfedgeID);
@@ -1540,7 +1593,6 @@ static void ccs__RefineCageVertexUvs(cc_Subd *subd)
         newHalfedges[2]->uvID = cc__EncodeUv(faceUv);
         newHalfedges[3]->uvID = cc__EncodeUv(prevEdgeUv);
     }
-#pragma omp barrier
 }
 
 
@@ -1550,15 +1602,17 @@ static void ccs__RefineCageVertexUvs(cc_Subd *subd)
  * This routine computes the UVs of the next subd level.
  *
  */
-static void ccs__RefineVertexUvs(cc_Subd *subd, int32_t depth)
+__global__ void ccs__RefineVertexUvs(cc_Subd *subd, int32_t depth)
 {
     const cc_Mesh *cage = subd->cage;
     const int32_t halfedgeCount = ccm_HalfedgeCountAtDepth(cage, depth);
     const int32_t stride = ccs_CumulativeHalfedgeCountAtDepth(cage, depth);
     cc_Halfedge_SemiRegular *halfedgesOut = &subd->halfedges[stride];
 
-#pragma omp for
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
+    int edges_per_thread = std::ceil(float(halfedgeCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+    for (int32_t halfedgeID = start; halfedgeID < end; ++halfedgeID) {
         const int32_t prevID = ccm_HalfedgePrevID_Quad(halfedgeID);
         const int32_t nextID = ccm_HalfedgeNextID_Quad(halfedgeID);
         const cc_VertexUv uv = ccs_HalfedgeVertexUv(subd, halfedgeID, depth);
@@ -1592,7 +1646,6 @@ static void ccs__RefineVertexUvs(cc_Subd *subd, int32_t depth)
         newHalfedges[2]->uvID = cc__EncodeUv(faceUv);
         newHalfedges[3]->uvID = cc__EncodeUv(prevEdgeUv);
     }
-#pragma omp barrier
 }
 
 
@@ -1605,10 +1658,10 @@ static void ccs__RefineVertexUvs(cc_Subd *subd, int32_t depth)
     if (ccm_UvCount(subd->cage) > 0) {
         const int32_t maxDepth = ccs_MaxDepth(subd);
 
-        ccs__RefineCageVertexUvs(subd);
+        ccs__RefineCageVertexUvs<<<1, NUM_THREADS>>>(subd);
 
         for (int32_t depth = 1; depth < maxDepth; ++depth) {
-            ccs__RefineVertexUvs(subd, depth);
+            ccs__RefineVertexUvs<<<1, NUM_THREADS>>>(subd, depth);
         }
     }
 }
@@ -1631,7 +1684,7 @@ __global__ void ccs__RefineCageCreases(cc_Subd *subd)
     int edges_per_thread = std::ceil(float(edgeCount) / float(NUM_THREADS));
     int start = threadIdx.x;
     int end = threadIdx.x + edges_per_thread;
-    for (int32_t edgeID = start; edgeID < end && edgeID < edgeCount; ++edgeID) {
+    for (int32_t edgeID = start; edgeID < end || edgeID < edgeCount; ++edgeID) {
         const int32_t nextID = ccm_CreaseNextID(cage, edgeID);
         const int32_t prevID = ccm_CreasePrevID(cage, edgeID);
         const bool t1 = ccm_CreasePrevID(cage, nextID) == edgeID && nextID != edgeID;
@@ -1672,7 +1725,11 @@ __global__ void ccs__RefineCreases(cc_Subd *subd, int32_t depth)
     const int32_t stride = ccs_CumulativeCreaseCountAtDepth(cage, depth);
     cc_Crease *creasesOut = &subd->creases[stride];
 
-    for (int32_t edgeID = 0; edgeID < creaseCount; ++edgeID) {
+    int edges_per_thread = std::ceil(float(creaseCount) / float(NUM_THREADS));
+    int start = threadIdx.x;
+    int end = threadIdx.x + edges_per_thread;
+
+    for (int32_t edgeID = start; edgeID < end || edgeID < creaseCount ; ++edgeID) {
         const int32_t nextID = ccs_CreaseNextID_Fast(subd, edgeID, depth);
         const int32_t prevID = ccs_CreasePrevID_Fast(subd, edgeID, depth);
         const bool t1 = ccs_CreasePrevID_Fast(subd, nextID, depth) == edgeID && nextID != edgeID;
@@ -1722,7 +1779,7 @@ __global__ void ccs__RefineCreases(cc_Subd *subd, int32_t depth)
  * The subdivision is computed down to the maxDepth parameter.
  *
  */
-static void ccs__RefineTopology(cc_Subd *subd)
+void ccs__RefineTopology(cc_Subd *subd)
 {
     ccs_RefineHalfedges(subd);
     ccs_RefineCreases(subd);
