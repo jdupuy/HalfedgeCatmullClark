@@ -182,7 +182,7 @@ BenchStats Bench(void (*SubdCallback)(cc_Subd *subd), cc_Subd *subd)
 int main(int argc, char **argv)
 {
     const char *filename = "./Kitchen_PUP.ccm";
-    int32_t maxDepth = 4;
+    int32_t maxDepth = 1;
 #ifdef FLAG_BENCH
     int32_t exportToObj = 0;
 #else
@@ -217,16 +217,16 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    LOG("Refining... I have changed the code");
-    {
-        const BenchStats stats = Bench(&ccs_RefineCreases, subd);
+    // LOG("Refining... I have changed the code");
+    // {
+    //     const BenchStats stats = Bench(&ccs_RefineCreases, subd);
 
-        LOG("Creases      -- median/mean/min/max (ms): %f / %f / %f / %f",
-            stats.median * 1e3,
-            stats.mean * 1e3,
-            stats.min * 1e3,
-            stats.max * 1e3);
-    }
+    //     LOG("Creases      -- median/mean/min/max (ms): %f / %f / %f / %f",
+    //         stats.median * 1e3,
+    //         stats.mean * 1e3,
+    //         stats.min * 1e3,
+    //         stats.max * 1e3);
+    // }
 
     {
         const BenchStats stats = Bench(&ccs_RefineHalfedges, subd);
@@ -238,15 +238,15 @@ int main(int argc, char **argv)
             stats.max * 1e3);
     }
 
-    {
-        const BenchStats stats = Bench(&ccs_RefineVertexPoints_Scatter, subd);
+    // {
+    //     const BenchStats stats = Bench(&ccs_RefineVertexPoints_Scatter, subd);
 
-        LOG("VertexPoints -- median/mean/min/max (ms): %f / %f / %f / %f",
-            stats.median * 1e3,
-            stats.mean * 1e3,
-            stats.min * 1e3,
-            stats.max * 1e3);
-    }
+    //     LOG("VertexPoints -- median/mean/min/max (ms): %f / %f / %f / %f",
+    //         stats.median * 1e3,
+    //         stats.mean * 1e3,
+    //         stats.min * 1e3,
+    //         stats.max * 1e3);
+    // }
 
 // #ifndef CC_DISABLE_UV
 //     {
@@ -265,7 +265,7 @@ int main(int argc, char **argv)
 
         LOG("Exporting...");
         for (int32_t depth = 0; depth <= maxDepth; ++depth) {
-            sprintf(buffer, "subd_%01i.obj", depth);
+            sprintf(buffer, "subd_%01i_only_halfedges.obj", depth);
 
             ExportToObj(subd, depth, buffer);
             LOG("Level %i: done.", depth);

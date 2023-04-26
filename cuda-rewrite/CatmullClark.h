@@ -29,3 +29,10 @@ void ccs__RefineTopology(cc_Subd *subd);
 #    include <string.h>
 #    define CC_MEMSET(ptr, value, num) cudaMemset(ptr, value, num)
 #endif
+
+#ifndef CC_PARALLEL_FOR
+#   define CC_PARALLEL_FOR    _Pragma("omp parallel for")
+#endif
+#ifndef CC_BARRIER
+#   define CC_BARRIER         _Pragma("omp barrier")
+#endif

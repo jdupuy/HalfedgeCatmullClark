@@ -1981,10 +1981,15 @@ CC_PARALLEL_FOR
                        creasePoint.array,
                        cc__Satf(avgS * 0.5f));
         }
-
+        if(halfedgeID == 0){
+            printf("atomicWeight (%02f, %02f, %02f)\n", atomicWeight.array[0], atomicWeight.array[1], atomicWeight.array[2]);
+        }
         for (int32_t i = 0; i < 3; ++i) {
 CC_ATOMIC
             newVertexPoints[vertexID].array[i]+= atomicWeight.array[i];
+        }
+        if(halfedgeID == 0){
+            printf("newVertexPoints (%02f, %02f, %02f)\n", newVertexPoints[vertexID].array[0], newVertexPoints[vertexID].array[1], newVertexPoints[vertexID].array[2]);
         }
     }
 CC_BARRIER
@@ -2503,7 +2508,7 @@ static void ccs__CreasedVertexPoints_Scatter(cc_Subd *subd, int32_t depth)
     const cc_VertexPoint *newFacePoints = &subd->vertexPoints[stride + vertexCount];
     const cc_VertexPoint *newEdgePoints = &subd->vertexPoints[stride + vertexCount + faceCount];
     cc_VertexPoint *newVertexPoints = &subd->vertexPoints[stride];
-
+    printf("halfedgeCount %d\n", halfedgeCount);
 CC_PARALLEL_FOR
     for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
         const int32_t vertexID = ccs_HalfedgeVertexID(subd, halfedgeID, depth);
@@ -2532,6 +2537,7 @@ CC_PARALLEL_FOR
         for (forwardIterator = ccs_HalfedgeTwinID(subd, prevID, depth);
              forwardIterator >= 0 && forwardIterator != halfedgeID;
              forwardIterator = ccs_HalfedgeTwinID(subd, forwardIterator, depth)) {
+            
             const int32_t prevID = ccs_HalfedgePrevID(subd, forwardIterator, depth);
             const float prevS = ccs_HalfedgeSharpness(subd, prevID, depth);
             const float prevCreaseWeight = cc__Signf(prevS);
@@ -2545,6 +2551,12 @@ CC_PARALLEL_FOR
 
             // next vertex halfedge
             forwardIterator = prevID;
+
+            if(halfedgeID == 0){
+                printf("Forward %d == %d ? \n", forwardIterator, halfedgeID);
+                int32_t twin = ccs_HalfedgeTwinID(subd, forwardIterator, depth);
+                printf("Twin %d ? \n", twin);
+            }
         }
 
         for (backwardIterator = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
@@ -2735,6 +2747,10 @@ CC_PARALLEL_FOR
         newHalfedges[1]->vertexID = vertexCount + faceCount + edgeID;
         newHalfedges[2]->vertexID = vertexCount + faceID;
         newHalfedges[3]->vertexID = vertexCount + faceCount + prevEdgeID;
+
+        if(halfedgeID == 0){
+            printf("twinID %d, edgeID %d, vertexID %d \n", halfedgesOut[(4 * halfedgeID + 1)].twinID, halfedgesOut[(4 * halfedgeID + 1)].edgeID, halfedgesOut[(4 * halfedgeID + 1)].vertexID);
+        }
     }
 CC_BARRIER
 }
@@ -2791,6 +2807,9 @@ CC_PARALLEL_FOR
         newHalfedges[1]->vertexID = vertexCount + faceCount + edgeID;
         newHalfedges[2]->vertexID = vertexCount + faceID;
         newHalfedges[3]->vertexID = vertexCount + faceCount + prevEdgeID;
+        if(halfedgeID == 0){
+            printf("twinID %d, edgeID %d, vertexID %d \n", halfedgesOut[(4 * halfedgeID + 1)].twinID, halfedgesOut[(4 * halfedgeID + 1)].edgeID, halfedgesOut[(4 * halfedgeID + 1)].vertexID);
+        }
     }
 CC_BARRIER
 }
