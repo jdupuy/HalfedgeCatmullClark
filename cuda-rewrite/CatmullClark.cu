@@ -171,8 +171,8 @@ CC_PARALLEL_FOR
     for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
         const cc_VertexPoint vertexPoint = ccm_HalfedgeVertexPoint(cage, halfedgeID);
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
-        float faceVertexCount = 1.0f;
-        float *newFacePoint = newFacePoints[faceID].array;
+        double faceVertexCount = 1.0f;
+        double *newFacePoint = newFacePoints[faceID].array;
 
         for (int32_t halfedgeIt = ccm_HalfedgeNextID(cage, halfedgeID);
                      halfedgeIt != halfedgeID;
@@ -182,7 +182,7 @@ CC_PARALLEL_FOR
 
         for (int32_t i = 0; i < 3; ++i) {
 CC_ATOMIC
-            newFacePoint[i]+= vertexPoint.array[i] / (float)faceVertexCount;
+            newFacePoint[i]+= vertexPoint.array[i] / (double)faceVertexCount;
         }
     }
 CC_BARRIER
@@ -203,8 +203,8 @@ CC_PARALLEL_FOR
         const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
         const int32_t twinID = ccm_HalfedgeTwinID(cage, halfedgeID);
         const int32_t nextID = ccm_HalfedgeNextID(cage, halfedgeID);
-        const float sharp = ccm_CreaseSharpness(cage, edgeID);
-        const float edgeWeight = cc__Satf(sharp);
+        const double sharp = ccm_CreaseSharpness(cage, edgeID);
+        const double edgeWeight = cc__Satf(sharp);
         const cc_VertexPoint newFacePoint = newFacePoints[faceID];
         const cc_VertexPoint oldEdgePoints[2] = {
             ccm_HalfedgeVertexPoint(cage, halfedgeID),
@@ -212,7 +212,7 @@ CC_PARALLEL_FOR
         };
         cc_VertexPoint smoothPoint = {0.0f, 0.0f, 0.0f};
         cc_VertexPoint sharpPoint = {0.0f, 0.0f, 0.0f};
-        float tmp[3], atomicWeight[3];
+        double tmp[3], atomicWeight[3];
 
         // sharp point
         cc__Lerp3f(tmp, oldEdgePoints[0].array, oldEdgePoints[1].array, 0.5f);
@@ -255,10 +255,10 @@ CC_PARALLEL_FOR
         const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
         const int32_t prevID = ccm_HalfedgePrevID(cage, halfedgeID);
         const int32_t prevEdgeID = ccm_HalfedgeEdgeID(cage, prevID);
-        const float thisS = ccm_HalfedgeSharpness(cage, halfedgeID);
-        const float prevS = ccm_HalfedgeSharpness(cage,     prevID);
-        const float creaseWeight = cc__Signf(thisS);
-        const float prevCreaseWeight = cc__Signf(prevS);
+        const double thisS = ccm_HalfedgeSharpness(cage, halfedgeID);
+        const double prevS = ccm_HalfedgeSharpness(cage,     prevID);
+        const double creaseWeight = cc__Signf(thisS);
+        const double prevCreaseWeight = cc__Signf(prevS);
         const cc_VertexPoint newPrevEdgePoint = newEdgePoints[prevEdgeID];
         const cc_VertexPoint newEdgePoint = newEdgePoints[edgeID];
         const cc_VertexPoint newFacePoint = newFacePoints[faceID];
@@ -267,18 +267,18 @@ CC_PARALLEL_FOR
         cc_VertexPoint smoothPoint = {0.0f, 0.0f, 0.0f};
         cc_VertexPoint creasePoint = {0.0f, 0.0f, 0.0f};
         cc_VertexPoint atomicWeight = {0.0f, 0.0f, 0.0f};
-        float avgS = prevS;
-        float creaseCount = prevCreaseWeight;
-        float valence = 1.0f;
+        double avgS = prevS;
+        double creaseCount = prevCreaseWeight;
+        double valence = 1.0f;
         int32_t forwardIterator, backwardIterator;
-        float tmp1[3], tmp2[3];
+        double tmp1[3], tmp2[3];
 
         for (forwardIterator = ccm_HalfedgeTwinID(cage, prevID);
              forwardIterator >= 0 && forwardIterator != halfedgeID;
              forwardIterator = ccm_HalfedgeTwinID(cage, forwardIterator)) {
             const int32_t prevID = ccm_HalfedgePrevID(cage, forwardIterator);
-            const float prevS = ccm_HalfedgeSharpness(cage, prevID);
-            const float prevCreaseWeight = cc__Signf(prevS);
+            const double prevS = ccm_HalfedgeSharpness(cage, prevID);
+            const double prevCreaseWeight = cc__Signf(prevS);
 
             // valence computation
             ++valence;
@@ -295,8 +295,8 @@ CC_PARALLEL_FOR
              forwardIterator < 0 && backwardIterator >= 0 && backwardIterator != halfedgeID;
              backwardIterator = ccm_HalfedgeTwinID(cage, backwardIterator)) {
             const int32_t nextID = ccm_HalfedgeNextID(cage, backwardIterator);
-            const float nextS = ccm_HalfedgeSharpness(cage, nextID);
-            const float nextCreaseWeight = cc__Signf(nextS);
+            const double nextS = ccm_HalfedgeSharpness(cage, nextID);
+            const double nextCreaseWeight = cc__Signf(nextS);
 
             // valence computation
             ++valence;
@@ -370,11 +370,11 @@ CC_PARALLEL_FOR
     for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
         const cc_VertexPoint vertexPoint = ccs_HalfedgeVertexPoint(subd, halfedgeID, depth);
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
-        float *newFacePoint = newFacePoints[faceID].array;
+        double *newFacePoint = newFacePoints[faceID].array;
 
         for (int32_t i = 0; i < 3; ++i) {
     CC_ATOMIC
-            newFacePoint[i]+= vertexPoint.array[i] / (float)4.0f;
+            newFacePoint[i]+= vertexPoint.array[i] / (double)4.0f;
         }
     }
 CC_BARRIER
@@ -396,8 +396,8 @@ CC_PARALLEL_FOR
         const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
         const int32_t nextID = ccs_HalfedgeNextID(subd, halfedgeID, depth);
-        const float sharp = ccs_CreaseSharpness(subd, edgeID, depth);
-        const float edgeWeight = cc__Satf(sharp);
+        const double sharp = ccs_CreaseSharpness(subd, edgeID, depth);
+        const double edgeWeight = cc__Satf(sharp);
         const cc_VertexPoint newFacePoint = newFacePoints[faceID];
         const cc_VertexPoint oldEdgePoints[2] = {
             ccs_HalfedgeVertexPoint(subd, halfedgeID, depth),
@@ -405,7 +405,7 @@ CC_PARALLEL_FOR
         };
         cc_VertexPoint smoothPoint = {0.0f, 0.0f, 0.0f};
         cc_VertexPoint sharpPoint = {0.0f, 0.0f, 0.0f};
-        float tmp[3], atomicWeight[3];
+        double tmp[3], atomicWeight[3];
 
         // sharp point
         cc__Lerp3f(tmp, oldEdgePoints[0].array, oldEdgePoints[1].array, 0.5f);
@@ -449,10 +449,10 @@ CC_PARALLEL_FOR
         const int32_t faceID = ccs_HalfedgeFaceID(subd, halfedgeID, depth);
         const int32_t prevID = ccs_HalfedgePrevID(subd, halfedgeID, depth);
         const int32_t prevEdgeID = ccs_HalfedgeEdgeID(subd, prevID, depth);
-        const float thisS = ccs_HalfedgeSharpness(subd, halfedgeID, depth);
-        const float prevS = ccs_HalfedgeSharpness(subd,     prevID, depth);
-        const float creaseWeight = cc__Signf(thisS);
-        const float prevCreaseWeight = cc__Signf(prevS);
+        const double thisS = ccs_HalfedgeSharpness(subd, halfedgeID, depth);
+        const double prevS = ccs_HalfedgeSharpness(subd,     prevID, depth);
+        const double creaseWeight = cc__Signf(thisS);
+        const double prevCreaseWeight = cc__Signf(prevS);
         const cc_VertexPoint newPrevEdgePoint = newEdgePoints[prevEdgeID];
         const cc_VertexPoint newEdgePoint = newEdgePoints[edgeID];
         const cc_VertexPoint newFacePoint = newFacePoints[faceID];
@@ -461,19 +461,19 @@ CC_PARALLEL_FOR
         cc_VertexPoint smoothPoint = {0.0f, 0.0f, 0.0f};
         cc_VertexPoint creasePoint = {0.0f, 0.0f, 0.0f};
         cc_VertexPoint atomicWeight = {0.0f, 0.0f, 0.0f};
-        float avgS = prevS;
-        float creaseCount = prevCreaseWeight;
-        float valence = 1.0f;
+        double avgS = prevS;
+        double creaseCount = prevCreaseWeight;
+        double valence = 1.0f;
         int32_t forwardIterator, backwardIterator;
-        float tmp1[3], tmp2[3];
+        double tmp1[3], tmp2[3];
 
         for (forwardIterator = ccs_HalfedgeTwinID(subd, prevID, depth);
              forwardIterator >= 0 && forwardIterator != halfedgeID;
              forwardIterator = ccs_HalfedgeTwinID(subd, forwardIterator, depth)) {
             
             const int32_t prevID = ccs_HalfedgePrevID(subd, forwardIterator, depth);
-            const float prevS = ccs_HalfedgeSharpness(subd, prevID, depth);
-            const float prevCreaseWeight = cc__Signf(prevS);
+            const double prevS = ccs_HalfedgeSharpness(subd, prevID, depth);
+            const double prevCreaseWeight = cc__Signf(prevS);
 
             // valence computation
             ++valence;
@@ -490,8 +490,8 @@ CC_PARALLEL_FOR
              forwardIterator < 0 && backwardIterator >= 0 && backwardIterator != halfedgeID;
              backwardIterator = ccs_HalfedgeTwinID(subd, backwardIterator, depth)) {
             const int32_t nextID = ccs_HalfedgeNextID(subd, backwardIterator, depth);
-            const float nextS = ccs_HalfedgeSharpness(subd, nextID, depth);
-            const float nextCreaseWeight = cc__Signf(nextS);
+            const double nextS = ccs_HalfedgeSharpness(subd, nextID, depth);
+            const double nextCreaseWeight = cc__Signf(nextS);
 
             // valence computation
             ++valence;

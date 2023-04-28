@@ -265,7 +265,7 @@ int main(int argc, char **argv)
 
         LOG("Exporting...");
         for (int32_t depth = 0; depth <= maxDepth; ++depth) {
-            sprintf(buffer, "subd_%01i_vertex_var1.obj", depth);
+            sprintf(buffer, "subd_%01i_vertex_var2.obj", depth);
 
             ExportToObj(subd, depth, buffer);
             LOG("Level %i: done.", depth);

@@ -6,22 +6,22 @@ __host__ __device__ int32_t cc__Max(int32_t a, int32_t b)
     return a > b ? a : b;
 }
 
-__host__ __device__  float cc__Minf(float x, float y)
+__host__ __device__  double cc__Minf(double x, double y)
 {
     return x < y ? x : y;
 }
 
-__host__ __device__   float cc__Maxf(float x, float y)
+__host__ __device__   double cc__Maxf(double x, double y)
 {
     return x > y ? x : y;
 }
 
-__host__ __device__   float cc__Satf(float x)
+__host__ __device__   double cc__Satf(double x)
 {
     return cc__Maxf(0.0f, cc__Minf(x, 1.0f));
 }
 
-__host__ __device__   float cc__Signf(float x)
+__host__ __device__   double cc__Signf(double x)
 {
     if (x < 0.0f) {
         return -1.0f;
@@ -33,43 +33,43 @@ __host__ __device__   float cc__Signf(float x)
 }
 
 __host__ __device__   void
-cc__Lerpfv(int32_t n, float *out, const float *x, const float *y, float u)
+cc__Lerpfv(int32_t n, double *out, const double *x, const double *y, double u)
 {
     for (int32_t i = 0; i < n; ++i) {
         out[i] = x[i] + u * (y[i] - x[i]);
     }
 }
 
-__host__ __device__   void cc__Lerp2f(float *out, const float *x, const float *y, float u)
+__host__ __device__   void cc__Lerp2f(double *out, const double *x, const double *y, double u)
 {
     cc__Lerpfv(2, out, x, y, u);
 }
 
-__host__ __device__   void cc__Lerp3f(float *out, const float *x, const float *y, float u)
+__host__ __device__   void cc__Lerp3f(double *out, const double *x, const double *y, double u)
 {
     cc__Lerpfv(3, out, x, y, u);
 }
 
-__host__ __device__   void cc__Mulfv(int32_t n, float *out, const float *x, float y)
+__host__ __device__   void cc__Mulfv(int32_t n, double *out, const double *x, double y)
 {
     for (int32_t i = 0; i < n; ++i) {
         out[i] = x[i] * y;
     }
 }
 
-__host__ __device__   void cc__Mul3f(float *out, const float *x, float y)
+__host__ __device__   void cc__Mul3f(double *out, const double *x, double y)
 {
     cc__Mulfv(3, out, x, y);
 }
 
-__host__ __device__   void cc__Addfv(int32_t n, float *out, const float *x, const float *y)
+__host__ __device__   void cc__Addfv(int32_t n, double *out, const double *x, const double *y)
 {
     for (int32_t i = 0; i < n; ++i) {
         out[i] = x[i] + y[i];
     }
 }
 
-__host__ __device__   void cc__Add3f(float *out, const float *x, const float *y)
+__host__ __device__   void cc__Add3f(double *out, const double *x, const double *y)
 {
     cc__Addfv(3, out, x, y);
 }

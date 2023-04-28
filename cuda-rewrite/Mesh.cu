@@ -257,7 +257,7 @@ __host__ __device__ int32_t ccm_FaceCount(const cc_Mesh *mesh)
     return ccm__Halfedge(mesh, halfedgeID)->faceID;
 }
 
- __host__ __device__  float ccm_HalfedgeSharpness(const cc_Mesh *mesh, int32_t halfedgeID)
+ __host__ __device__  double ccm_HalfedgeSharpness(const cc_Mesh *mesh, int32_t halfedgeID)
 {
     return ccm_CreaseSharpness(mesh, ccm_HalfedgeEdgeID(mesh, halfedgeID));
 }
@@ -284,7 +284,7 @@ __host__ __device__  int32_t ccm_CreasePrevID(const cc_Mesh *mesh, int32_t edgeI
     return ccm__Crease(mesh, edgeID)->prevID;
 }
 
- __host__ __device__  float ccm_CreaseSharpness(const cc_Mesh *mesh, int32_t edgeID)
+ __host__ __device__  double ccm_CreaseSharpness(const cc_Mesh *mesh, int32_t edgeID)
 {
     return ccm__Crease(mesh, edgeID)->sharpness;
 }
@@ -533,14 +533,47 @@ bool ccm__ReadData(cc_Mesh *mesh, FILE *stream)
     const int32_t edgeCount = ccm_EdgeCount(mesh);
     const int32_t faceCount = ccm_FaceCount(mesh);
 
-    return
+    const int32_t vertexByteCount = vertexCount * sizeof(cc_VertexPoint_f);
+    const int32_t uvByteCount = uvCount * sizeof(cc_VertexUv_f);
+    const int32_t creaseByteCount = edgeCount * sizeof(cc_Crease_f);
+
+    cc_Crease_f *creases = (cc_Crease_f *)malloc(creaseByteCount);
+    cc_VertexPoint_f *vertexPts = (cc_VertexPoint_f *)malloc(vertexByteCount);
+    cc_VertexUv_f *uvs = (cc_VertexUv_f *)malloc(uvByteCount);
+
+    bool isSuccess = 
        (fread(mesh->vertexToHalfedgeIDs , sizeof(int32_t)       , vertexCount  , stream) == (size_t)vertexCount)
     && (fread(mesh->edgeToHalfedgeIDs   , sizeof(int32_t)       , edgeCount    , stream) == (size_t)edgeCount)
     && (fread(mesh->faceToHalfedgeIDs   , sizeof(int32_t)       , faceCount    , stream) == (size_t)faceCount)
-    && (fread(mesh->vertexPoints        , sizeof(cc_VertexPoint), vertexCount  , stream) == (size_t)vertexCount)
-    && (fread(mesh->uvs                 , sizeof(cc_VertexUv)   , uvCount      , stream) == (size_t)uvCount)
-    && (fread(mesh->creases             , sizeof(cc_Crease)     , creaseCount  , stream) == (size_t)creaseCount)
+    && (fread(vertexPts                 , sizeof(cc_VertexPoint_f), vertexCount  , stream) == (size_t)vertexCount)
+    && (fread(uvs                       , sizeof(cc_VertexUv_f)   , uvCount      , stream) == (size_t)uvCount)
+    && (fread(creases                   , sizeof(cc_Crease_f)     , creaseCount  , stream) == (size_t)creaseCount)
     && (fread(mesh->halfedges           , sizeof(cc_Halfedge)   , halfedgeCount, stream) == (size_t)halfedgeCount);
+
+    // now convert all floats to doubles
+    for(int i = 0; i < vertexCount; i++){
+        cc_VertexPoint_f tmp = vertexPts[i];
+        mesh->vertexPoints[i].x = (double) tmp.x;
+        mesh->vertexPoints[i].y = (double) tmp.y;
+        mesh->vertexPoints[i].z = (double) tmp.z;
+    }
+
+    for(int i = 0; i < uvCount; i++){
+        cc_VertexUv_f tmp = uvs[i];
+        mesh->uvs[i].u = (double) tmp.u;
+        mesh->uvs[i].v = (double) tmp.v;
+    }
+
+    for(int i = 0; i < creaseCount; i++){
+        cc_Crease_f tmp = creases[i];
+        mesh->creases[i].nextID = tmp.nextID;
+        mesh->creases[i].prevID = tmp.prevID;
+        mesh->creases[i].sharpness = (double) tmp.sharpness;
+    }
+    free(creases); 
+    free(vertexPts);
+    free(uvs);
+    return isSuccess;
 }
 
 
@@ -771,12 +804,12 @@ cc_Subd *ccs_Create(const cc_Mesh *cage, int32_t maxDepth)
  */
 
 
- __host__ __device__  float ccs_CreaseSharpness_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth)
+ __host__ __device__  double ccs_CreaseSharpness_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth)
 {
     return ccs__Crease(subd, edgeID, depth)->sharpness;
 }
 
-__host__ __device__  float ccs_CreaseSharpness(const cc_Subd *subd, int32_t edgeID, int32_t depth)
+__host__ __device__  double ccs_CreaseSharpness(const cc_Subd *subd, int32_t edgeID, int32_t depth)
 {
     const int32_t creaseCount = ccm_CreaseCountAtDepth(subd->cage, depth);
 
@@ -869,7 +902,7 @@ __host__ __device__  int32_t ccs_HalfedgeEdgeID(const cc_Subd *subd, int32_t hal
     return ccs__Halfedge(subd, halfedgeID, depth)->edgeID;
 }
 
-__host__ __device__  float
+__host__ __device__  double
 ccs_HalfedgeSharpness(const cc_Subd *subd, int32_t halfedgeID, int32_t depth)
 {
     const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);

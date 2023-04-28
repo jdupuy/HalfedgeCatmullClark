@@ -9,8 +9,27 @@
 
 // point data
 typedef union {
-    struct {float x, y, z;};
+    struct { float x, y, z;};
     float array[3];
+} cc_VertexPoint_f;
+
+// uv data
+typedef union {
+    struct {float u, v;};
+    float array[2];
+} cc_VertexUv_f;
+
+// crease data
+typedef struct {
+    int32_t nextID;
+    int32_t prevID;
+    float sharpness;
+} cc_Crease_f;
+
+// point data
+typedef union {
+    struct {double x, y, z;};
+    double array[3];
 } cc_VertexPoint;
 
 
@@ -18,7 +37,7 @@ typedef union {
 typedef struct {
     int32_t nextID;
     int32_t prevID;
-    float sharpness;
+    double sharpness;
 } cc_Crease;
 
 // generic halfedge data
@@ -110,13 +129,13 @@ typedef struct {
  __host__ __device__ int32_t ccs_HalfedgeVertexID(const cc_Subd *subd, int32_t halfedgeID, int32_t depth);
  __host__ __device__ cc_VertexPoint ccs_HalfedgeVertexPoint(const cc_Subd *subd, int32_t halfedgeID, int32_t depth);
  __host__ __device__ cc_VertexUv ccs_HalfedgeVertexUv(const cc_Subd *subd, int32_t halfedgeID, int32_t depth);
- __host__ __device__ float ccs_HalfedgeSharpness   (const cc_Subd *subd, int32_t halfedgeID, int32_t depth);
+ __host__ __device__ double ccs_HalfedgeSharpness   (const cc_Subd *subd, int32_t halfedgeID, int32_t depth);
  __host__ __device__ int32_t ccs_CreaseNextID_Fast (const cc_Subd *subd, int32_t edgeID, int32_t depth);
  __host__ __device__ int32_t ccs_CreaseNextID      (const cc_Subd *subd, int32_t edgeID, int32_t depth);
  __host__ __device__ int32_t ccs_CreasePrevID_Fast (const cc_Subd *subd, int32_t edgeID, int32_t depth);
  __host__ __device__ int32_t ccs_CreasePrevID      (const cc_Subd *subd, int32_t edgeID, int32_t depth);
- __host__ __device__ float ccs_CreaseSharpness_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth);
- __host__ __device__ float ccs_CreaseSharpness     (const cc_Subd *subd, int32_t edgeID, int32_t depth);
+ __host__ __device__ double ccs_CreaseSharpness_Fast(const cc_Subd *subd, int32_t edgeID, int32_t depth);
+ __host__ __device__ double ccs_CreaseSharpness     (const cc_Subd *subd, int32_t edgeID, int32_t depth);
   __host__ __device__ cc_VertexPoint ccs_VertexPoint(const cc_Subd *subd, int32_t vertexID, int32_t depth);
 
 // halfedge remapping (O(1))
@@ -189,12 +208,12 @@ Mesh Counting at Subdivision Depth
  __host__ __device__  int32_t ccm_HalfedgeEdgeID(const cc_Mesh *mesh, int32_t halfedgeID);
  __host__ __device__ int32_t ccm_HalfedgeVertexID(const cc_Mesh *mesh, int32_t halfedgeID);
  __host__ __device__ int32_t ccm_HalfedgeUvID(const cc_Mesh *mesh, int32_t halfedgeID);
- __host__ __device__  float ccm_HalfedgeSharpness(const cc_Mesh *mesh, int32_t halfedgeID);
+ __host__ __device__  double ccm_HalfedgeSharpness(const cc_Mesh *mesh, int32_t halfedgeID);
  __host__ __device__ cc_VertexPoint ccm_HalfedgeVertexPoint(const cc_Mesh *mesh, int32_t halfedgeID);
  __host__ __device__ cc_VertexUv ccm_HalfedgeVertexUv(const cc_Mesh *mesh, int32_t halfedgeID);
  __host__ __device__  int32_t ccm_CreaseNextID(const cc_Mesh *mesh, int32_t edgeID);
  __host__ __device__  int32_t ccm_CreasePrevID(const cc_Mesh *mesh, int32_t edgeID);
- __host__ __device__  float ccm_CreaseSharpness(const cc_Mesh *mesh, int32_t edgeID);
+ __host__ __device__  double ccm_CreaseSharpness(const cc_Mesh *mesh, int32_t edgeID);
  __host__ __device__ cc_VertexPoint ccm_VertexPoint(const cc_Mesh *mesh, int32_t vertexID);
  __host__ __device__ cc_VertexUv ccm_Uv(const cc_Mesh *mesh, int32_t uvID);
  __host__ __device__  int32_t ccm_HalfedgeNextID_Quad(int32_t halfedgeID);

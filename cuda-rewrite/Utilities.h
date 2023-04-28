@@ -13,26 +13,26 @@
 
 // uv data
 typedef union {
-    struct {float u, v;};
-    float array[2];
+    struct {double u, v;};
+    double array[2];
 } cc_VertexUv;
 
 __host__ __device__ int32_t cc__Max(int32_t a, int32_t b);
-__host__ __device__  float cc__Minf(float x, float y);
-__host__ __device__   float cc__Maxf(float x, float y);
-__host__ __device__   float cc__Satf(float x);
-__host__ __device__   float cc__Signf(float x);
+__host__ __device__  double cc__Minf(double x, double y);
+__host__ __device__   double cc__Maxf(double x, double y);
+__host__ __device__   double cc__Satf(double x);
+__host__ __device__   double cc__Signf(double x);
 
-__host__ __device__   void cc__Lerpfv(int32_t n, float *out, const float *x, const float *y, float u);
+__host__ __device__   void cc__Lerpfv(int32_t n, double *out, const double *x, const double *y, double u);
 
-__host__ __device__   void cc__Lerp2f(float *out, const float *x, const float *y, float u);
-__host__ __device__   void cc__Lerp3f(float *out, const float *x, const float *y, float u);
+__host__ __device__   void cc__Lerp2f(double *out, const double *x, const double *y, double u);
+__host__ __device__   void cc__Lerp3f(double *out, const double *x, const double *y, double u);
 
-__host__ __device__   void cc__Mulfv(int32_t n, float *out, const float *x, float y);
+__host__ __device__   void cc__Mulfv(int32_t n, double *out, const double *x, double y);
 
-__host__ __device__   void cc__Mul3f(float *out, const float *x, float y);
+__host__ __device__   void cc__Mul3f(double *out, const double *x, double y);
 
-__host__ __device__  void cc__Addfv(int32_t n, float *out, const float *x, const float *y);
-__host__ __device__  void cc__Add3f(float *out, const float *x, const float *y);
+__host__ __device__  void cc__Addfv(int32_t n, double *out, const double *x, const double *y);
+__host__ __device__  void cc__Add3f(double *out, const double *x, const double *y);
 __host__ __device__  cc_VertexUv cc__DecodeUv(int32_t uvEncoded);
 __host__ __device__  int32_t cc__EncodeUv(const cc_VertexUv uv);
