@@ -5,7 +5,10 @@
 #include "Mesh.h"
 #include "CatmullClark.h"
 
-#define NUM_THREADS 4
+#define NUM_THREADS 256
+#define TID (threadIdx.x + blockIdx.x * blockDim.x)
+#define CHECK_TID(count) if (TID >= count) return;
+#define EACH_ELEM(num_elems) (num_elems + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS
 
 __device__ int32_t
 ccs_VertexPointToHalfedgeID(const cc_Subd *subd, int32_t vertexID, int32_t depth)
@@ -1585,6 +1588,46 @@ void ccs__ClearVertexPoints(cc_Subd *subd)
  * step and stores them in the subd.
  *
  */
+__global__ void RefineCageInner(const cc_Mesh *cage, int32_t vertexCount, int32_t edgeCount, int32_t faceCount, int32_t halfedgeCount, cc_Halfedge_SemiRegular *halfedgesOut){
+    CHECK_TID(halfedgeCount)
+    int32_t halfedgeID = TID;
+    const int32_t twinID = ccm_HalfedgeTwinID(cage, halfedgeID);
+    const int32_t prevID = ccm_HalfedgePrevID(cage, halfedgeID);
+    const int32_t nextID = ccm_HalfedgeNextID(cage, halfedgeID);
+    const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
+    const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
+    const int32_t prevEdgeID = ccm_HalfedgeEdgeID(cage, prevID);
+    const int32_t prevTwinID = ccm_HalfedgeTwinID(cage, prevID);
+    const int32_t vertexID = ccm_HalfedgeVertexID(cage, halfedgeID);
+    const int32_t twinNextID = twinID >= 0 ? ccm_HalfedgeNextID(cage, twinID) : -1;
+    
+    cc_Halfedge_SemiRegular *newHalfedges[4] = {
+        &halfedgesOut[(4 * halfedgeID + 0)],
+        &halfedgesOut[(4 * halfedgeID + 1)],
+        &halfedgesOut[(4 * halfedgeID + 2)],
+        &halfedgesOut[(4 * halfedgeID + 3)]
+    };
+
+    // twinIDs
+    newHalfedges[0]->twinID = 4 * twinNextID + 3;
+    newHalfedges[1]->twinID = 4 * nextID     + 2;
+    newHalfedges[2]->twinID = 4 * prevID     + 1;
+    newHalfedges[3]->twinID = 4 * prevTwinID + 0;
+
+    // edgeIDs
+    newHalfedges[0]->edgeID = 2 * edgeID + (halfedgeID > twinID ? 0 : 1);
+    newHalfedges[1]->edgeID = 2 * edgeCount + halfedgeID;
+    newHalfedges[2]->edgeID = 2 * edgeCount + prevID;
+    newHalfedges[3]->edgeID = 2 * prevEdgeID + (prevID > prevTwinID ? 1 : 0);
+
+    // vertexIDs
+    newHalfedges[0]->vertexID = vertexID;
+    newHalfedges[1]->vertexID = vertexCount + faceCount + edgeID;
+    newHalfedges[2]->vertexID = vertexCount + faceID;
+    newHalfedges[3]->vertexID = vertexCount + faceCount + prevEdgeID;
+}
+
+
 void ccs__RefineCageHalfedges(cc_Subd *subd)
 {
     const cc_Mesh *cage = subd->cage;
@@ -1593,49 +1636,49 @@ void ccs__RefineCageHalfedges(cc_Subd *subd)
     const int32_t faceCount = ccm_FaceCount(cage);
     const int32_t halfedgeCount = ccm_HalfedgeCount(cage);
     cc_Halfedge_SemiRegular *halfedgesOut = subd->halfedges;
+    int32_t intermed = (halfedgeCount + NUM_THREADS - 1) / NUM_THREADS;
 
-CC_PARALLEL_FOR
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
-        const int32_t twinID = ccm_HalfedgeTwinID(cage, halfedgeID);
-        const int32_t prevID = ccm_HalfedgePrevID(cage, halfedgeID);
-        const int32_t nextID = ccm_HalfedgeNextID(cage, halfedgeID);
-        const int32_t faceID = ccm_HalfedgeFaceID(cage, halfedgeID);
-        const int32_t edgeID = ccm_HalfedgeEdgeID(cage, halfedgeID);
-        const int32_t prevEdgeID = ccm_HalfedgeEdgeID(cage, prevID);
-        const int32_t prevTwinID = ccm_HalfedgeTwinID(cage, prevID);
-        const int32_t vertexID = ccm_HalfedgeVertexID(cage, halfedgeID);
-        const int32_t twinNextID =
-            twinID >= 0 ? ccm_HalfedgeNextID(cage, twinID) : -1;
-        cc_Halfedge_SemiRegular *newHalfedges[4] = {
-            &halfedgesOut[(4 * halfedgeID + 0)],
-            &halfedgesOut[(4 * halfedgeID + 1)],
-            &halfedgesOut[(4 * halfedgeID + 2)],
-            &halfedgesOut[(4 * halfedgeID + 3)]
-        };
+    printf("halfedgeCount %d, num_blocks %d, num_threads %d \n", halfedgeCount, intermed, NUM_THREADS);
+    RefineCageInner<<<EACH_ELEM(halfedgeCount)>>>(cage, vertexCount, edgeCount, faceCount, halfedgeCount, halfedgesOut);
+    cudaDeviceSynchronize();
+}
 
-        // twinIDs
-        newHalfedges[0]->twinID = 4 * twinNextID + 3;
-        newHalfedges[1]->twinID = 4 * nextID     + 2;
-        newHalfedges[2]->twinID = 4 * prevID     + 1;
-        newHalfedges[3]->twinID = 4 * prevTwinID + 0;
+__global__ void RefineInnerHalfedges(cc_Subd *subd, int32_t depth, const cc_Mesh *cage, int32_t halfedgeCount, int32_t vertexCount, int32_t edgeCount, int32_t faceCount, int32_t stride, cc_Halfedge_SemiRegular *halfedgesOut){
+    CHECK_TID(halfedgeCount)
+    int32_t halfedgeID = TID;
+    const int32_t twinID = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
+    const int32_t prevID = ccm_HalfedgePrevID_Quad(halfedgeID);
+    const int32_t nextID = ccm_HalfedgeNextID_Quad(halfedgeID);
+    const int32_t faceID = ccm_HalfedgeFaceID_Quad(halfedgeID);
+    const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
+    const int32_t vertexID = ccs_HalfedgeVertexID(subd, halfedgeID, depth);
+    const int32_t prevEdgeID = ccs_HalfedgeEdgeID(subd, prevID, depth);
+    const int32_t prevTwinID = ccs_HalfedgeTwinID(subd, prevID, depth);
+    const int32_t twinNextID = ccm_HalfedgeNextID_Quad(twinID);
+    cc_Halfedge_SemiRegular *newHalfedges[4] = {
+        &halfedgesOut[(4 * halfedgeID + 0)],
+        &halfedgesOut[(4 * halfedgeID + 1)],
+        &halfedgesOut[(4 * halfedgeID + 2)],
+        &halfedgesOut[(4 * halfedgeID + 3)]
+    };
 
-        // edgeIDs
-        newHalfedges[0]->edgeID = 2 * edgeID + (halfedgeID > twinID ? 0 : 1);
-        newHalfedges[1]->edgeID = 2 * edgeCount + halfedgeID;
-        newHalfedges[2]->edgeID = 2 * edgeCount + prevID;
-        newHalfedges[3]->edgeID = 2 * prevEdgeID + (prevID > prevTwinID ? 1 : 0);
+    // twinIDs
+    newHalfedges[0]->twinID = 4 * twinNextID + 3;
+    newHalfedges[1]->twinID = 4 * nextID     + 2;
+    newHalfedges[2]->twinID = 4 * prevID     + 1;
+    newHalfedges[3]->twinID = 4 * prevTwinID + 0;
 
-        // vertexIDs
-        newHalfedges[0]->vertexID = vertexID;
-        newHalfedges[1]->vertexID = vertexCount + faceCount + edgeID;
-        newHalfedges[2]->vertexID = vertexCount + faceID;
-        newHalfedges[3]->vertexID = vertexCount + faceCount + prevEdgeID;
+    // edgeIDs
+    newHalfedges[0]->edgeID = 2 * edgeID + (halfedgeID > twinID ? 0 : 1);
+    newHalfedges[1]->edgeID = 2 * edgeCount + halfedgeID;
+    newHalfedges[2]->edgeID = 2 * edgeCount + prevID;
+    newHalfedges[3]->edgeID = 2 * prevEdgeID + (prevID > prevTwinID ? 1 : 0);
 
-        if(halfedgeID == 0){
-            printf("twinID %d, edgeID %d, vertexID %d \n", halfedgesOut[(4 * halfedgeID + 1)].twinID, halfedgesOut[(4 * halfedgeID + 1)].edgeID, halfedgesOut[(4 * halfedgeID + 1)].vertexID);
-        }
-    }
-CC_BARRIER
+    // vertexIDs
+    newHalfedges[0]->vertexID = vertexID;
+    newHalfedges[1]->vertexID = vertexCount + faceCount + edgeID;
+    newHalfedges[2]->vertexID = vertexCount + faceID;
+    newHalfedges[3]->vertexID = vertexCount + faceCount + prevEdgeID;
 }
 
 
@@ -1654,47 +1697,8 @@ static void ccs__RefineHalfedges(cc_Subd *subd, int32_t depth)
     const int32_t faceCount = ccm_FaceCountAtDepth_Fast(cage, depth);
     const int32_t stride = ccs_CumulativeHalfedgeCountAtDepth(cage, depth);
     cc_Halfedge_SemiRegular *halfedgesOut = &subd->halfedges[stride];
-
-CC_PARALLEL_FOR
-    for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
-        const int32_t twinID = ccs_HalfedgeTwinID(subd, halfedgeID, depth);
-        const int32_t prevID = ccm_HalfedgePrevID_Quad(halfedgeID);
-        const int32_t nextID = ccm_HalfedgeNextID_Quad(halfedgeID);
-        const int32_t faceID = ccm_HalfedgeFaceID_Quad(halfedgeID);
-        const int32_t edgeID = ccs_HalfedgeEdgeID(subd, halfedgeID, depth);
-        const int32_t vertexID = ccs_HalfedgeVertexID(subd, halfedgeID, depth);
-        const int32_t prevEdgeID = ccs_HalfedgeEdgeID(subd, prevID, depth);
-        const int32_t prevTwinID = ccs_HalfedgeTwinID(subd, prevID, depth);
-        const int32_t twinNextID = ccm_HalfedgeNextID_Quad(twinID);
-        cc_Halfedge_SemiRegular *newHalfedges[4] = {
-            &halfedgesOut[(4 * halfedgeID + 0)],
-            &halfedgesOut[(4 * halfedgeID + 1)],
-            &halfedgesOut[(4 * halfedgeID + 2)],
-            &halfedgesOut[(4 * halfedgeID + 3)]
-        };
-
-        // twinIDs
-        newHalfedges[0]->twinID = 4 * twinNextID + 3;
-        newHalfedges[1]->twinID = 4 * nextID     + 2;
-        newHalfedges[2]->twinID = 4 * prevID     + 1;
-        newHalfedges[3]->twinID = 4 * prevTwinID + 0;
-
-        // edgeIDs
-        newHalfedges[0]->edgeID = 2 * edgeID + (halfedgeID > twinID ? 0 : 1);
-        newHalfedges[1]->edgeID = 2 * edgeCount + halfedgeID;
-        newHalfedges[2]->edgeID = 2 * edgeCount + prevID;
-        newHalfedges[3]->edgeID = 2 * prevEdgeID + (prevID > prevTwinID ? 1 : 0);
-
-        // vertexIDs
-        newHalfedges[0]->vertexID = vertexID;
-        newHalfedges[1]->vertexID = vertexCount + faceCount + edgeID;
-        newHalfedges[2]->vertexID = vertexCount + faceID;
-        newHalfedges[3]->vertexID = vertexCount + faceCount + prevEdgeID;
-        if(halfedgeID == 0){
-            printf("twinID %d, edgeID %d, vertexID %d \n", halfedgesOut[(4 * halfedgeID + 1)].twinID, halfedgesOut[(4 * halfedgeID + 1)].edgeID, halfedgesOut[(4 * halfedgeID + 1)].vertexID);
-        }
-    }
-CC_BARRIER
+    RefineInnerHalfedges<<<EACH_ELEM(halfedgeCount)>>>(subd, depth, cage, halfedgeCount, vertexCount, edgeCount, faceCount, stride, halfedgesOut);
+    cudaDeviceSynchronize();
 }
 
 
@@ -1704,7 +1708,7 @@ CC_BARRIER
  */
 void ccs_RefineHalfedges(cc_Subd *subd)
 {
-    printf("Code has changed");
+    printf("Code has changed to Global Call\n");
     const int32_t maxDepth = ccs_MaxDepth(subd);
 
     ccs__RefineCageHalfedges(subd);

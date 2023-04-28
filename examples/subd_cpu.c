@@ -182,7 +182,7 @@ BenchStats Bench(void (*SubdCallback)(cc_Subd *subd), cc_Subd *subd)
 int main(int argc, char **argv)
 {
     const char *filename = "./Kitchen_PUP.ccm";
-    int32_t maxDepth = 1;
+    int32_t maxDepth = 4;
 #ifdef FLAG_BENCH
     int32_t exportToObj = 0;
 #else
