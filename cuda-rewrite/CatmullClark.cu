@@ -65,9 +65,7 @@ void ccs__RefineCageHalfedges(cc_Subd *subd)
     const int32_t faceCount = ccm_FaceCount(cage);
     const int32_t halfedgeCount = ccm_HalfedgeCount(cage);
     cc_Halfedge_SemiRegular *halfedgesOut = subd->halfedges;
-    int32_t intermed = (halfedgeCount + NUM_THREADS - 1) / NUM_THREADS;
 
-    printf("halfedgeCount %d, num_blocks %d, num_threads %d \n", halfedgeCount, intermed, NUM_THREADS);
     RefineCageInner<<<EACH_ELEM(halfedgeCount)>>>(cage, vertexCount, edgeCount, faceCount, halfedgeCount, halfedgesOut);
 }
 
