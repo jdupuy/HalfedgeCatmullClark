@@ -25,9 +25,14 @@ void ccs__RefineTopology(cc_Subd *subd);
 #    define CC_MEMCPY(dest, src, count) memcpy(dest, src, count)
 #endif
 
+// #ifndef CC_MEMSET
+// #    include <string.h>
+// #    define CC_MEMSET(ptr, value, num) cudaMemset(ptr, value, num)
+// #endif
+
 #ifndef CC_MEMSET
 #    include <string.h>
-#    define CC_MEMSET(ptr, value, num) cudaMemset(ptr, value, num)
+#    define CC_MEMSET(ptr, value, num) memset(ptr, value, num)
 #endif
 
 #ifndef CC_PARALLEL_FOR
@@ -35,4 +40,8 @@ void ccs__RefineTopology(cc_Subd *subd);
 #endif
 #ifndef CC_BARRIER
 #   define CC_BARRIER         _Pragma("omp barrier")
+#endif
+
+#ifndef CC_ATOMIC
+#   define CC_ATOMIC          _Pragma("omp atomic" )
 #endif

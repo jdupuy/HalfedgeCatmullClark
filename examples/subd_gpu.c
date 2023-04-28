@@ -739,13 +739,13 @@ ExportToObj(
         const int32_t vertexUvCount = ccm_UvCount(cage);
 
         for (int32_t vertexID = 0; vertexID < vertexPointCount; ++vertexID) {
-            const float *v = ccm_VertexPoint(cage, vertexID).array;
+            const double *v = ccm_VertexPoint(cage, vertexID).array;
 
             fprintf(pf, "v %f %f %f\n", v[0], v[1], v[2]);
         }
 
         for (int32_t vertexID = 0; vertexID < vertexUvCount; ++vertexID) {
-            const float *v = ccm_Uv(cage, vertexID).array;
+            const double *v = ccm_Uv(cage, vertexID).array;
 
             fprintf(pf, "vt %f %f\n", v[0], v[1]);
         }
@@ -753,14 +753,14 @@ ExportToObj(
         const int32_t halfedgeCount = ccm_HalfedgeCountAtDepth(cage, depth);
 
         for (int32_t vertexID = 0; vertexID < vertexPointCount; ++vertexID) {
-            const float *v = ccs_VertexPoint(subd, vertexID, depth).array;
+            const double *v = ccs_VertexPoint(subd, vertexID, depth).array;
 
             fprintf(pf, "v %f %f %f\n", v[0], v[1], v[2]);
         }
 
 #ifndef CC_DISABLE_UV
         for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
-            const float *uv = ccs_HalfedgeVertexUv(subd, halfedgeID, depth).array;
+            const double *uv = ccs_HalfedgeVertexUv(subd, halfedgeID, depth).array;
 
             fprintf(pf, "vt %f %f\n", uv[0], uv[1]);
         }

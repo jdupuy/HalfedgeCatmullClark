@@ -147,7 +147,7 @@ BenchStats Bench(void (*SubdCallback)(cc_Subd *subd), cc_Subd *subd)
         clock_gettime(CLOCK_MONOTONIC, &startTime);
 #endif
         (*SubdCallback)(subd);
-        cudaDeviceSynchronize();
+        cudaDeviceSynchronize(); // remember this is here after every "big block" call
 #ifdef _WIN32
         stopTime = GetTickCount();
         time = (stopTime - startTime) / 1e3;
@@ -232,15 +232,15 @@ int main(int argc, char **argv)
             stats.max * 1e3);
     }
 
-    // {
-    //     const BenchStats stats = Bench(&ccs_RefineVertexPoints_Scatter, subd);
+    {
+        const BenchStats stats = Bench(&ccs_RefineVertexPoints_Scatter, subd);
 
-    //     LOG("VertexPoints -- median/mean/min/max (ms): %f / %f / %f / %f",
-    //         stats.median * 1e3,
-    //         stats.mean * 1e3,
-    //         stats.min * 1e3,
-    //         stats.max * 1e3);
-    // }
+        LOG("VertexPoints -- median/mean/min/max (ms): %f / %f / %f / %f",
+            stats.median * 1e3,
+            stats.mean * 1e3,
+            stats.min * 1e3,
+            stats.max * 1e3);
+    }
 
 // #ifndef CC_DISABLE_UV
 //     {
@@ -259,7 +259,7 @@ int main(int argc, char **argv)
 
         LOG("Exporting...");
         for (int32_t depth = 0; depth <= maxDepth; ++depth) {
-            sprintf(buffer, "subd_%01i_halfedges.obj", depth);
+            sprintf(buffer, "subd_%01i_vertex.obj", depth);
 
             ExportToObj(subd, depth, buffer);
             LOG("Level %i: done.", depth);

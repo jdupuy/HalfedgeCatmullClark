@@ -23,8 +23,8 @@ include_directories(submodules/glfw/include)
 include_directories(submodules/dj_opengl)
 include_directories(..)
 
-add_executable(obj_to_ccm obj_to_ccm.c)
-add_executable(mesh_info mesh_info.c)
+# add_executable(obj_to_ccm obj_to_ccm.c)
+#add_executable(mesh_info mesh_info.c)
 add_executable(subd_cpu subd_cpu.c)
 
 add_executable(bench_cpu subd_cpu.c)

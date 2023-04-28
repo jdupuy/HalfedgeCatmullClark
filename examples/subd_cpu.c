@@ -36,13 +36,13 @@ ExportToObj(
         const int32_t vertexUvCount = ccm_UvCount(cage);
 
         for (int32_t vertexID = 0; vertexID < vertexPointCount; ++vertexID) {
-            const float *v = ccm_VertexPoint(cage, vertexID).array;
+            const double *v = ccm_VertexPoint(cage, vertexID).array;
 
             fprintf(pf, "v %f %f %f\n", v[0], v[1], v[2]);
         }
 
         for (int32_t vertexID = 0; vertexID < vertexUvCount; ++vertexID) {
-            const float *v = ccm_Uv(cage, vertexID).array;
+            const double *v = ccm_Uv(cage, vertexID).array;
 
             fprintf(pf, "vt %f %f\n", v[0], v[1]);
         }
@@ -50,14 +50,14 @@ ExportToObj(
         const int32_t halfedgeCount = ccm_HalfedgeCountAtDepth(cage, depth);
 
         for (int32_t vertexID = 0; vertexID < vertexPointCount; ++vertexID) {
-            const float *v = ccs_VertexPoint(subd, vertexID, depth).array;
+            const double *v = ccs_VertexPoint(subd, vertexID, depth).array;
 
             fprintf(pf, "v %f %f %f\n", v[0], v[1], v[2]);
         }
 
 #ifndef CC_DISABLE_UV
         for (int32_t halfedgeID = 0; halfedgeID < halfedgeCount; ++halfedgeID) {
-            const float *uv = ccs_HalfedgeVertexUv(subd, halfedgeID, depth).array;
+            const double *uv = ccs_HalfedgeVertexUv(subd, halfedgeID, depth).array;
 
             fprintf(pf, "vt %f %f\n", uv[0], uv[1]);
         }
@@ -238,15 +238,15 @@ int main(int argc, char **argv)
             stats.max * 1e3);
     }
 
-    // {
-    //     const BenchStats stats = Bench(&ccs_RefineVertexPoints_Scatter, subd);
+    {
+        const BenchStats stats = Bench(&ccs_RefineVertexPoints_Scatter, subd);
 
-    //     LOG("VertexPoints -- median/mean/min/max (ms): %f / %f / %f / %f",
-    //         stats.median * 1e3,
-    //         stats.mean * 1e3,
-    //         stats.min * 1e3,
-    //         stats.max * 1e3);
-    // }
+        LOG("VertexPoints -- median/mean/min/max (ms): %f / %f / %f / %f",
+            stats.median * 1e3,
+            stats.mean * 1e3,
+            stats.min * 1e3,
+            stats.max * 1e3);
+    }
 
 // #ifndef CC_DISABLE_UV
 //     {
@@ -265,7 +265,7 @@ int main(int argc, char **argv)
 
         LOG("Exporting...");
         for (int32_t depth = 0; depth <= maxDepth; ++depth) {
-            sprintf(buffer, "subd_%01i_only_halfedges.obj", depth);
+            sprintf(buffer, "subd_%01i_vertex_var1.obj", depth);
 
             ExportToObj(subd, depth, buffer);
             LOG("Level %i: done.", depth);
