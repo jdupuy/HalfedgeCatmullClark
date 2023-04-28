@@ -586,8 +586,7 @@ void ccs_RefineVertexPoints_Scatter(cc_Subd *subd)
     for (int32_t depth = 1; depth < ccs_MaxDepth(subd); ++depth) {
         ccs__FacePoints_Scatter(subd, depth);
         ccs__CreasedEdgePoints_Scatter(subd, depth);
-        cudaDeviceSynchronize();
         ccs__CreasedVertexPoints_Scatter(subd, depth);
-        
+        cudaDeviceSynchronize();
     }
 }
