@@ -588,3 +588,102 @@ void ccs_RefineVertexPoints_Scatter(cc_Subd *subd)
         cudaDeviceSynchronize();
     }
 }
+/*************
+
+Start Creases Code
+
+**************/
+
+__global__ void ccs__RefineCageCreases_Inner(const cc_Mesh *cage, int32_t edgeCount, cc_Crease *creasesOut){
+    CHECK_TID(edgeCount)
+    int32_t edgeID = TID;
+
+    const int32_t nextID = ccm_CreaseNextID(cage, edgeID);
+    const int32_t prevID = ccm_CreasePrevID(cage, edgeID);
+    const bool t1 = ccm_CreasePrevID(cage, nextID) == edgeID && nextID != edgeID;
+    const bool t2 = ccm_CreaseNextID(cage, prevID) == edgeID && prevID != edgeID;
+    const double thisS = 3.0f * ccm_CreaseSharpness(cage, edgeID);
+    const double nextS = ccm_CreaseSharpness(cage, nextID);
+    const double prevS = ccm_CreaseSharpness(cage, prevID);
+    cc_Crease *newCreases[2] = {
+        &creasesOut[(2 * edgeID + 0)],
+        &creasesOut[(2 * edgeID + 1)]
+    };
+
+    // next rule
+    newCreases[0]->nextID = 2 * edgeID + 1;
+    newCreases[1]->nextID = 2 * nextID + (t1 ? 0 : 1);
+
+    // prev rule
+    newCreases[0]->prevID = 2 * prevID + (t2 ? 1 : 0);
+    newCreases[1]->prevID = 2 * edgeID + 0;
+
+    // sharpness rule
+    newCreases[0]->sharpness = cc__Maxf(0.0f, (prevS + thisS) / 4.0f - 1.0f);
+    newCreases[1]->sharpness = cc__Maxf(0.0f, (thisS + nextS) / 4.0f - 1.0f);
+}
+
+void ccs__RefineCageCreases(cc_Subd *subd)
+{
+    const cc_Mesh *cage = subd->cage;
+    const int32_t edgeCount = ccm_EdgeCount(cage);
+    cc_Crease *creasesOut = subd->creases;
+    ccs__RefineCageCreases_Inner<<<EACH_ELEM(edgeCount)>>>(cage, edgeCount, creasesOut);
+}
+
+__global__ void ccs__RefineCreases(cc_Subd *subd, int32_t depth, const cc_Mesh *cage, int32_t creaseCount, int32_t stride, cc_Crease *creasesOut)
+{
+    CHECK_TID(creaseCount)
+    int32_t edgeID = TID;
+    const int32_t nextID = ccs_CreaseNextID_Fast(subd, edgeID, depth);
+    const int32_t prevID = ccs_CreasePrevID_Fast(subd, edgeID, depth);
+    const bool t1 = ccs_CreasePrevID_Fast(subd, nextID, depth) == edgeID && nextID != edgeID;
+    const bool t2 = ccs_CreaseNextID_Fast(subd, prevID, depth) == edgeID && prevID != edgeID;
+    const double thisS = 3.0f * ccs_CreaseSharpness_Fast(subd, edgeID, depth);
+    const double nextS = ccs_CreaseSharpness_Fast(subd, nextID, depth);
+    const double prevS = ccs_CreaseSharpness_Fast(subd, prevID, depth);
+    cc_Crease *newCreases[2] = {
+        &creasesOut[(2 * edgeID + 0)],
+        &creasesOut[(2 * edgeID + 1)]
+    };
+
+    // next rule
+    newCreases[0]->nextID = 2 * edgeID + 1;
+    newCreases[1]->nextID = 2 * nextID + (t1 ? 0 : 1);
+
+    // prev rule
+    newCreases[0]->prevID = 2 * prevID + (t2 ? 1 : 0);
+    newCreases[1]->prevID = 2 * edgeID + 0;
+
+    // sharpness rule
+    newCreases[0]->sharpness = cc__Maxf(0.0f, (prevS + thisS) / 4.0f - 1.0f);
+    newCreases[1]->sharpness = cc__Maxf(0.0f, (thisS + nextS) / 4.0f - 1.0f);
+}
+
+/*******************************************************************************
+ * RefineCreases -- Applies crease subdivision on the subd
+ *
+ * This routine computes the topology of the next subd level.
+ *
+ */
+void ccs__RefineCreases(cc_Subd *subd, int32_t depth)
+{
+    const cc_Mesh *cage = subd->cage;
+    const int32_t creaseCount = ccm_CreaseCountAtDepth(cage, depth);
+    const int32_t stride = ccs_CumulativeCreaseCountAtDepth(cage, depth);
+    cc_Crease *creasesOut = &subd->creases[stride];
+    ccs__RefineCreases<<<EACH_ELEM(creaseCount)>>>(subd, depth, cage, creaseCount, stride, creasesOut);
+}
+
+void ccs_RefineCreases(cc_Subd *subd)
+{
+    const int32_t maxDepth = ccs_MaxDepth(subd);
+
+    ccs__RefineCageCreases(subd);
+    cudaDeviceSynchronize();
+
+    for (int32_t depth = 1; depth < maxDepth; ++depth) {
+        ccs__RefineCreases(subd, depth);
+        cudaDeviceSynchronize();
+    }
+}

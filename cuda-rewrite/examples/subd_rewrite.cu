@@ -212,15 +212,15 @@ int main(int argc, char **argv)
     }
 
     LOG("Refining... I have changed the code");
-    // {
-    //     const BenchStats stats = Bench(&ccs_RefineCreases, subd);
+    {
+        const BenchStats stats = Bench(&ccs_RefineCreases, subd);
 
-    //     LOG("Creases      -- median/mean/min/max (ms): %f / %f / %f / %f",
-    //         stats.median * 1e3,
-    //         stats.mean * 1e3,
-    //         stats.min * 1e3,
-    //         stats.max * 1e3);
-    // }
+        LOG("Creases      -- median/mean/min/max (ms): %f / %f / %f / %f",
+            stats.median * 1e3,
+            stats.mean * 1e3,
+            stats.min * 1e3,
+            stats.max * 1e3);
+    }
 
     {
         const BenchStats stats = Bench(&ccs_RefineHalfedges, subd);

@@ -217,16 +217,16 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // LOG("Refining... I have changed the code");
-    // {
-    //     const BenchStats stats = Bench(&ccs_RefineCreases, subd);
+    LOG("Refining... I have changed the code");
+    {
+        const BenchStats stats = Bench(&ccs_RefineCreases, subd);
 
-    //     LOG("Creases      -- median/mean/min/max (ms): %f / %f / %f / %f",
-    //         stats.median * 1e3,
-    //         stats.mean * 1e3,
-    //         stats.min * 1e3,
-    //         stats.max * 1e3);
-    // }
+        LOG("Creases      -- median/mean/min/max (ms): %f / %f / %f / %f",
+            stats.median * 1e3,
+            stats.mean * 1e3,
+            stats.min * 1e3,
+            stats.max * 1e3);
+    }
 
     {
         const BenchStats stats = Bench(&ccs_RefineHalfedges, subd);
@@ -265,7 +265,7 @@ int main(int argc, char **argv)
 
         LOG("Exporting...");
         for (int32_t depth = 0; depth <= maxDepth; ++depth) {
-            sprintf(buffer, "subd_%01i_vertex_var2.obj", depth);
+            sprintf(buffer, "subd_%01i_creases.obj", depth);
 
             ExportToObj(subd, depth, buffer);
             LOG("Level %i: done.", depth);
