@@ -680,10 +680,8 @@ void ccs_RefineCreases(cc_Subd *subd)
     const int32_t maxDepth = ccs_MaxDepth(subd);
 
     ccs__RefineCageCreases(subd);
-    cudaDeviceSynchronize();
 
     for (int32_t depth = 1; depth < maxDepth; ++depth) {
         ccs__RefineCreases(subd, depth);
-        cudaDeviceSynchronize();
     }
 }
