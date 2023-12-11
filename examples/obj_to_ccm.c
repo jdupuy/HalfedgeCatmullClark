@@ -677,6 +677,7 @@ CCDEF cc_Mesh *LoadObj(const char *filename)
         return NULL;
     }
 
+    CC_LOG("Parsing OBJ...");
     if (!ObjReadMeshSize(stream, &halfedgeCount, &vertexCount, &uvCount)) {
         CC_LOG("cc: invalid OBJ file");
         fclose(stream);
@@ -684,6 +685,7 @@ CCDEF cc_Mesh *LoadObj(const char *filename)
         return NULL;
     }
 
+    CC_LOG("Allocating mesh...");
     mesh = (cc_Mesh *)CC_MALLOC(sizeof(*mesh));
     mesh->halfedgeCount = halfedgeCount;
     mesh->halfedges = (cc_Halfedge *)CC_MALLOC(sizeof(cc_Halfedge) * halfedgeCount);
@@ -694,6 +696,7 @@ CCDEF cc_Mesh *LoadObj(const char *filename)
     faceIterator = cbf_Create(halfedgeCount + 1);
     rewind(stream);
 
+    CC_LOG("Loading mesh data...");
     if (!ObjLoadMeshData(stream, mesh, faceIterator)) {
         CC_LOG("cc: failed to read OBJ data");
         CC_FREE(mesh->halfedges);
@@ -706,10 +709,14 @@ CCDEF cc_Mesh *LoadObj(const char *filename)
         return NULL;
     }
 
+    CC_LOG("Computing twins...");
     ComputeTwins(mesh);
+    CC_LOG("Computing edge mappings...");
     LoadEdgeMappings(mesh);
+    CC_LOG("Computing vertex mappings...");
     LoadVertexHalfedges(mesh);
 
+    CC_LOG("Loading creases...");
     if (true) {
         const int32_t creaseCount = ccm_EdgeCount(mesh);
 
@@ -738,6 +745,7 @@ CC_BARRIER
     fclose(stream);
     cbf_Release(faceIterator);
 
+    CC_LOG("Computing crease neighbors...");
     ComputeCreaseNeighbors(mesh);
 
     return mesh;
